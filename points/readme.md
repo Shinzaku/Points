@@ -1,4 +1,4 @@
-#Points
+# Points
 Various resource tracking into display bars
 As of 1.0.0 supports the following:
 - XP/LP, XP/LP per hour estimates, and XP/LP chain # and timer
