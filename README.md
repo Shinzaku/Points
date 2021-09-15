@@ -7,7 +7,7 @@ Various information and resource point tracker; Includes the following
 - Current merit pooints
 - CP tracking, with estimate of JP per hour, chain # and timer
 - Current JP amount of current job
-- Sparks amounts
+- Sparks
 - Accolades
 - Dynamis key item tracking, timer
 - Assault objective tracking, timer
