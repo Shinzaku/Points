@@ -6,3 +6,5 @@ As of 1.0.0 supports the following:
 - Dynamis key item tracking and event timer
 - Abyssea lights tracking and zone timer
 - Assault objective tracking and zone timer
+
+Type /points help to view a list of available commands
