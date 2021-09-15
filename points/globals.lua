@@ -12,7 +12,7 @@ HelpString = "\30\67- \30\71fsize\30\67 - Sets compact bar font size\n" ..
              "\30\67- \30\71border\30\67 - Sets border color to r g b a values (0 - 255) or default\n" ..
              --"\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
              "\30\67Click (or shift-click for compact) and drag to reposition\n\30\67Configuration is saved when unloaded\n" ..
-             "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Ashita4-Addons/points/";
+             "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Ashita4-Addons/tree/main/points";
 
 DefaultColors = {}
 DefaultColors.FFXICappedValue = { 0.23, 0.67, 0.91, 1.0 };
