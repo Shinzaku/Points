@@ -436,8 +436,12 @@ ashita.events.register("d3d_present", "present_cb", function ()
             SetCompactVisibility(false);
         end
         return;
+    elseif (not points.settings.use_compact and compactBar.textObjs[1]:GetVisible()) then
+        SetCompactVisibility(false);
+        return;
     elseif ((points.settings.use_compact and not compactBar.wrapper:GetVisible()) or points.use_both) then
         SetCompactVisibility(true);
+        return;
     elseif (currZone ~= nil and currZone ~= 0 and currZone ~= lastZone) then
         lastZone = currZone;
     end
@@ -458,6 +462,17 @@ ashita.events.register("d3d_present", "present_cb", function ()
 
         CalculateEstimates();
         TickTimers();
+    end
+    if (points.settings.rate_reset_timer > 0) then
+        if (tValues.default.lastXpKillTime > 0) then
+            if (tValues.default.lastXpKillTime >= os.clock() + points.settings.rate_reset_timer) then
+                ResetXPCPRates();
+            end
+        elseif (tValues.default.lastCpKillTime > 0) then
+            if (tValues.default.lastCpKillTime >= os.clock() + points.settings.rate_reset_timer) then
+                ResetXPCPRates();
+            end
+        end
     end
 
     ------------------------------------------------
@@ -543,6 +558,7 @@ function LoadCompactBar()
     compactBar.wrapper.lockedz = true;  
     compactBar.wrapper.position_x = points.settings.compact.x;
     compactBar.wrapper.position_y = points.settings.compact.y;
+    compactBar.wrapper.visible = points.settings.use_compact;
 
     compactBar.jobicon.auto_resize = false;
     compactBar.jobicon.can_focus = false;
@@ -553,6 +569,7 @@ function LoadCompactBar()
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));    
     compactBar.jobicon.background.width = 64;
     compactBar.jobicon.background.height = 16;
+    compactBar.jobicon.visible = points.settings.use_compact;
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
@@ -560,9 +577,8 @@ function LoadCompactBar()
         compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
         compactBar.textObjs[i].can_focus = false;
         compactBar.textObjs[i].parent = compactBar.wrapper;
+        compactBar.textObjs[i].visible = points.settings.use_compact;
     end
-
-    SetCompactVisibility(points.settings.use_compact);
 end
 
 function UpdateCompactBar(currJob)
@@ -579,6 +595,7 @@ function UpdateCompactBar(currJob)
         for i=#compactBar.textObjs + 1,#currTokens,1 do
             compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
             compactBar.textObjs[i].can_focus = false;
+            compactBar.textObjs[i].visible = points.settings.use_compact;
             compactBar.textObjs[i].parent = compactBar.wrapper;
         end
     end
@@ -712,13 +729,23 @@ function UpdateFromZone(zoneId)
     end
     
     if (#tValues.default.xpKills > 0 or #tValues.default.cpKills > 0) then
-        tValues.default.xpKills = {};
-        tValues.default.xpChain = 0;
-        tValues.default.xpTimer = 0;
-        tValues.default.cpKills = {};
-        tValues.default.cpChain = 0;
-        tValues.default.cpTimer = 0;
+        ResetXPCPRates();
     end
+end
+
+function ResetXPCPRates()    
+    tValues.default.xpKills = {};
+    tValues.default.lastXpKillTime = 0;
+    tValues.default.xpChain = 0;
+    tValues.default.xpTimer = 0;
+    tValues.default.estXpHour = 0;
+    tValues.default.estMpHour = 0;
+    tValues.default.cpKills = {};
+    tValues.default.lastCpKillTime = 0;
+    tValues.default.cpChain = 0;
+    tValues.default.cpTimer = 0;
+    tValues.default.estCpHour = 0;
+    tValues.default.estJpHour = 0;
 end
 
 function UpdateDynamisKI(kItems)

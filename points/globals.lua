@@ -10,6 +10,7 @@ HelpString = "\30\67- \30\71fsize\30\67 - Sets compact bar font size\n" ..
              --"\30\67- \30\71color\30\67 - Sets default font color to r g b a values (0 - 255)\n" ..
              "\30\67- \30\71bgcolor\30\67 - Sets background color to r g b a values (0 - 255) or default\n" ..
              "\30\67- \30\71border\30\67 - Sets border color to r g b a values (0 - 255) or default\n" ..
+             "\30\67- \30\71rtimer\30\67 - Sets XP and CP rate reset timer in seconds; Setting 0 will disable\n" ..
              --"\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
              "\30\67Click (or shift-click for compact) and drag to reposition\n\30\67Configuration is saved when unloaded\n" ..
              "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Points";
@@ -58,6 +59,7 @@ DefaultSettings = T{
     token_order_nyzul = "[NyzulFloor] [DIV] [NyzulObjective] [DIV] [EventTimer]",
     token_order_voidwatch = "[VWRed] [VWBlue] [VWGreen] [VWYellow] [VWWhite]",
     theme = "default",
+    rate_reset_timer = 600,
 }
 WrapperSettings = T{
     visible = true,
