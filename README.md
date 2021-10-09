@@ -4,7 +4,7 @@
 Enter "/points help" after loading the addon to view available commands
 Various information and resource point tracker; Includes the following
 - Current job and level
-- XP and LP tracking, with estimates of gain per hour, chain # and timer
+- XP and LP tracking, with estimates of gain per hour, chain # and estimated timer (not exact)
 - Current merit pooints
 - CP tracking, with estimate of JP per hour, chain # and timer
 - Current JP amount of current job
