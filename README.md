@@ -13,3 +13,6 @@ Various information and resource point tracker; Includes the following
 - Dynamis key item tracking, timer
 - Assault objective tracking, timer
 - Abyssea lights tracking, timer
+
+** As of 1.0.2, to customize the token display order, please unload the addon and go to your settings file (/config/addons/points/) and edit the lines related to "token_order". This is just a workaround until the configuration editor is completed
+- Default: Normal display outside of events
