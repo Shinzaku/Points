@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.0.2";
+addon.version   = "1.0.3";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -54,7 +54,8 @@ local globalTimer = 0;
 local tValues = {};
 tValues.eventTimer = 0;
 tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {}, 
-                    cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0, };
+                    cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0,
+                    mBreaker = false, lastEpKillTime = 0, epKills = {}, epChain = 0, estEpHour = 0, epTimer = 0, };
 tValues.dynamis = { keyItems = { false, false, false, false, false } };
 tValues.abyssea = { pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0, silvery = 0, ebon = 0, };
 tValues.assault = { objective = "", timer = 0, };
@@ -205,6 +206,11 @@ ashita.events.register("command", "command_callback1", function (e)
                 compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.bg_border_color);
                 PrintMsg("Border color changed");
             end
+        elseif (args[2] == "defaults") then
+            points.settings.token_order_default = DefaultSettings.token_order_default;
+            points.settings.token_order_mastered = DefaultSettings.token_order_mastered;
+            local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
+            UpdateFromZone(zone, false);
         elseif (args[2] == "bothbars") then
             points.use_both = not points.use_both;
             SetCompactVisibility(points.settings.use_compact);
@@ -253,6 +259,15 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
             tValues.default.xpChain = val2;
             tValues.default.xpTimer = 60;        
             tValues.default.lastXpKillTime = killTime;
+        elseif (msgId == 809 or msgId == 810) then
+            if (tValues.default.lastEpKillTime ~= 0) then
+                table.insert(tValues.default.epKills, { time=(killTime - tValues.default.lastEpKillTime), ep=val});   
+            else
+                table.insert(tValues.default.epKills, { time=1, ep=val});   
+            end
+            tValues.default.epChain = val2;
+            tValues.default.epTimer = 30;        
+            tValues.default.lastEpKillTime = killTime;
         end
     elseif (e.id == 0x061) then
         -- char stats
@@ -268,7 +283,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
 		end
         
         if (points.loaded) then
-            UpdateFromZone(zoneId);
+            UpdateFromZone(zoneId, true);
         end				
     elseif (e.id == 0x055) then
         --print("KI Log Update");
@@ -489,6 +504,9 @@ end);
 
 function DrawPointsBar(currJob)
     local jobLevel = player:GetMainJobLevel();
+    if (tValues.default.mBreaker) then
+        jobLevel = player:GetMasteryJobLevel();
+    end
     if (not points.settings.use_compact or points.useboth) then
         imgui.SetNextWindowSize({ -1, 32 }, ImGuiCond_Always);
         imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_FirstUseEver);    
@@ -607,7 +625,11 @@ function UpdateCompactBar(currJob)
     local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
     compactBar.jobicon.background.texture_offset_x = imgOffsetX;
     compactBar.jobicon.background.texture_offset_y = imgOffsetY;
-    compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", player:GetMainJobLevel());
+    local jobLevel = player:GetMainJobLevel();
+    if (tValues.default.mBreaker) then
+        jobLevel = player:GetMasteryJobLevel();
+    end
+    compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
     -------------------------------------------
     -- These values are already being calculated while default bar is displayed; Ensures the tokens are parsed otherwise --
     if (points.settings.use_compact and not points.use_both) then
@@ -650,6 +672,7 @@ function SetCompactVisibility(val)
 end
 
 function InitTrackedValues()
+    tValues.default.mBreaker = player:HasKeyItem(GetKeyItemFromName("master breaker"));
     tValues.default.sparks = 0;
     tValues.default.accolades = player:GetUnityPoints();
     local dynaKI = {};
@@ -671,6 +694,11 @@ function CalculateEstimates()
         tValues.default.cpTimer = tValues.default.cpTimer - 1;
     else
         tValues.default.cpChain = 0;
+    end
+    if (tValues.default.epTimer > 0) then
+        tValues.default.epTimer = tValues.default.epTimer - 1;
+    else
+        tValues.default.epChain = 0;
     end
     
     if (#tValues.default.xpKills > 0) then
@@ -697,6 +725,17 @@ function CalculateEstimates()
         tValues.default.estCpHour = (((60 / avgTime) * avgCP) * 60);
         tValues.default.estJpHour = tValues.default.estCpHour / 30000;
     end
+    if (#tValues.default.epKills > 0) then
+        local avgEP = 0;
+        local avgTime = 0;
+        for i,v in pairs(tValues.default.epKills) do
+            avgEP = avgEP + v.ep;
+            avgTime = avgTime + v.time;
+        end
+        avgEP = avgEP / #tValues.default.epKills;
+        avgTime = (avgTime + (os.clock() - tValues.default.lastEpKillTime)) / (#tValues.default.epKills + 1);
+        tValues.default.estEpHour = (((60 / avgTime) * avgEP) * 60);
+    end
 end
 
 function TickTimers()
@@ -705,30 +744,42 @@ function TickTimers()
     end
 end
 
-function UpdateFromZone(zoneId)
+function UpdateFromZone(zoneId, reset)
     if (DynamisMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_dynamis, " ");
-        tValues.eventTimer = 3600;
+        if (reset) then
+            tValues.eventTimer = 3600;
+        end
     elseif (AbysseaMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_abyssea, " ");
-        for i,v in pairs(tValues.abyssea) do
-            v = 0;
+        if (reset) then
+            for i,v in pairs(tValues.abyssea) do
+                v = 0;
+            end
+            tValues.eventTimer = 300;
         end
-        tValues.eventTimer = 300;
     elseif (AssaultMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_assault, " ");
-        tValues.eventTimer = 1800;
+        if (reset) then
+            tValues.eventTimer = 1800;
+        end
     elseif (NyzulMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_nyzul, " ");
     else 
-        currTokens = ashita.regex.split(points.settings.token_order_default, " ");
-        for i,v in pairs(tValues.dynamis.keyItems) do
-            v = false;
+        if (tValues.default.mBreaker) then
+            currTokens = ashita.regex.split(points.settings.token_order_mastered, " ");
+        else
+            currTokens = ashita.regex.split(points.settings.token_order_default, " ");
         end
-        tValues.eventTimer = 0;
+        if (reset) then
+            for i,v in pairs(tValues.dynamis.keyItems) do
+                v = false;
+            end
+            tValues.eventTimer = 0;
+        end
     end
     
-    if (#tValues.default.xpKills > 0 or #tValues.default.cpKills > 0) then
+    if ((#tValues.default.xpKills > 0 or #tValues.default.cpKills > 0) and reset) then
         ResetXPCPRates();
     end
 end
@@ -746,6 +797,11 @@ function ResetXPCPRates()
     tValues.default.cpTimer = 0;
     tValues.default.estCpHour = 0;
     tValues.default.estJpHour = 0;
+    tValues.default.lastEpKillTime = 0;
+    tValues.default.epKills = {};
+    tValues.default.epChain = 0;
+    tValues.default.estEpHour = 0;
+    tValues.default.epTimer = 0;
 end
 
 function UpdateDynamisKI(kItems)
@@ -766,7 +822,7 @@ function UpdateAbysseaLights(strength, light)
 end;
 
 function GetKeyItemFromName(name)
-    local findKI = AshitaCore:GetResourceManager():GetString("keyitems", name, 2);
+    local findKI = AshitaCore:GetResourceManager():GetString("keyitems.names", name, 2);
     if (findKI ~= nil) then
         return findKI;
     end
@@ -932,6 +988,33 @@ function ParseToken(i, token)
                 imgui.Text(string.format("%d (%ds)", tValues.default.cpChain, tValues.default.cpTimer));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateChain, "CP", tValues.default.cpChain, tValues.default.cpTimer));
+        end        
+    elseif (token == "[EP]" and tValues.default.mBreaker) then
+        if (not points.settings.use_compact or points.use_both) then
+            imgui.Text(string.format("EP: %s/%s", SeparateNumbers(player:GetMasteryExp()), SeparateNumbers(player:GetMasteryExpNeeded())));
+        end
+        compactBar.textObjs[i]:SetText(string.format("EP: %s/%s", SeparateNumbers(player:GetMasteryExp()), SeparateNumbers(player:GetMasteryExpNeeded())));
+    elseif (token == "[EPHour]" and tValues.default.mBreaker) then
+        if (not points.settings.use_compact or points.use_both) then
+            imgui.Text(string.format("(%s EP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estEpHour))));
+        end
+        compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estEpHour), "EP"));
+    elseif (token == "[EPChain]" and tValues.default.mBreaker) then
+        local label = "EP";
+        if (tValues.default.epTimer > 0) then
+            if (not points.settings.use_compact or points.use_both) then                
+                imgui.Text(label .. "\xef\x83\x81>");
+                imgui.SameLine();
+                imgui.TextColored(DefaultColors.FFXIYellow, string.format("%d (%ds)", tValues.default.epChain, tValues.default.epTimer));
+            end
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.epChain, DefaultColors.FFXIYellow), EncodeColor(tValues.default.epTimer, DefaultColors.FFXIYellow)));
+        else
+            if (not points.settings.use_compact or points.use_both) then                
+                imgui.Text(label .. "\xef\x83\x81>");
+                imgui.SameLine();
+                imgui.Text(string.format("%d (%ds)", tValues.default.epChain, tValues.default.epTimer));
+            end
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, tValues.default.epChain, tValues.default.epTimer));
         end
     elseif (token =="[Sparks]") then
         if (tValues.default.sparks == 99999) then
@@ -1138,11 +1221,11 @@ end
 
 function InitPointsBar()
     local playerEntity = GetPlayerEntity();
-    lastZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
-    UpdateFromZone(lastZone);    
+    lastZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);            
+    InitTrackedValues();
+    UpdateFromZone(lastZone, true);    
     lastJob = player:GetMainJob();
     globalTimer = math.floor(os.clock());
-    InitTrackedValues();
     
     -- Defaults for compact bar
     LoadCompactBar();
@@ -1154,8 +1237,12 @@ end
 function DrawConfigWindow()
     imgui.SetNextWindowSize({ 350, 250 }, ImGuiCond_FirstUseEver);
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 10, 10 });
+    local strTokenDefault = { '' };
+    local strTokenMasterd = "";
+    local strTokenDynamis = "";
     if(points.config_is_open and imgui.Begin("Points Configuration", points.config_is_open, bit.bor(ImGuiWindowFlags_NoSavedSettings))) then
-        
+        imgui.Text("Token Displays:");
+
         imgui.End();
     end
     imgui.PopStyleVar(1);

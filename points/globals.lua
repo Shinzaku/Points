@@ -53,6 +53,7 @@ DefaultSettings = T{
     bg_color = DefaultColors.FFXIGreyBg,
     bg_border_color = DefaultColors.FFXIGreyBorder,
     token_order_default = "[XP] [Merits] [XPHour] [XPChain] [DIV] [CP] [JP] [JPHour] [CPChain] [DIV] [Sparks] [DIV] [Accolades]",
+    token_order_mastered = "[EP] [EPHour] [EPChain] [DIV] [CP] [JP] [JPHour] [CPChain] [DIV] [Sparks] [DIV] [Accolades]",
     token_order_dynamis = "[DynamisKI] [DIV] [EventTimer]",
     token_order_abyssea = "[Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon] [DIV] [EventTimer]",
     token_order_assault = "[AssaultObjective] [DIV] [EventTimer]",
