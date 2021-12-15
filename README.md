@@ -21,8 +21,6 @@ Various information and resource point tracker; Includes the following
 
 Available tokens:
 - [XP] [Merits] [XPHour] [XPChain] [CP] [JP] [JPHour] [CPChain] [Sparks] [Accolades] [EP] [EPHour] [EPChain]
-- [DynamisKI] [DIV] [EventTimer]
-- [Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon]
-- [AssaultObjective]
-- [DIV] [EventTimer]
+- [DynamisKI] [Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon] [AssaultObjective]
+- [DIV] (vertical divider) [EventTimer]
 
