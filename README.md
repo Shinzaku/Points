@@ -6,9 +6,9 @@ Various information and resource point tracker; Includes the following
 - Current job and level
 - XP and LP tracking, with estimates of gain per hour, chain # and estimated timer (not exact)
 - Current merit points
-- CP tracking, with estimate of JP per hour, chain # and timer
+- CP tracking, with estimate of JP per hour, chain # and estimated timer
 - Current JP amount of current job
-- EP tracking, estimate per hour, chain # and timer
+- EP tracking, estimate per hour, chain # and estimated timer
 - Sparks
 - Accolades
 - Dynamis key item tracking, timer
