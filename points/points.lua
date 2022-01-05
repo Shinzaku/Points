@@ -895,7 +895,7 @@ function ParseToken(i, token)
     end
 
     if (token =="[XP]") then
-        if (player:GetExpCurrent() == 55999 or player:GetLimitMode() > 96) then
+        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocker()) then
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text(string.format("LP: %s/%s", SeparateNumbers(player:GetLimitPoints()), SeparateNumbers(10000)));    
             end            
@@ -919,7 +919,7 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(string.format(TemplateBracket, player:GetMeritPoints()));
         end
     elseif (token =="[XPHour]") then
-        if (player:GetExpCurrent() == 55999 or player:GetLimitMode() > 96) then
+        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocker()) then
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour))));
             end
@@ -932,7 +932,7 @@ function ParseToken(i, token)
         end
     elseif (token =="[XPChain]") then
         local label = "XP";
-        if (player:GetExpCurrent() == 55999 or player:GetLimitMode() > 96) then
+        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocker()) then
             label = "LP";
         end
         if (tValues.default.xpTimer > 0) then
