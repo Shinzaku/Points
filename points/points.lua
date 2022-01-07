@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.0.5";
+addon.version   = "1.0.6";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -70,6 +70,7 @@ compactBar.jobiconIndent = "   ";
 compactBar.textObjs = {};
 
 local debugText = "";
+local zoning = false;
 
 function UpdateSettings(s)
     -- Update the settings table..
@@ -235,22 +236,6 @@ end);
 -- desc: Event called when the addon is processing outgoing packets.
 ----------------------------------------------------------------------------------------------------
 ashita.events.register('packet_out', 'packet_out_callback1', function (e)
-    --[[ Valid Arguments
-
-        e.id                 - (ReadOnly) The id of the packet.
-        e.size               - (ReadOnly) The size of the packet.
-        e.data               - (ReadOnly) The data of the packet.
-        e.data_raw           - The raw data pointer of the packet. (Use with FFI.)
-        e.data_modified      - The modified data.
-        e.data_modified_raw  - The modified raw data. (Use with FFI.)
-        e.chunk_size         - The size of the full packet chunk that contained the packet.
-        e.chunk_data         - The data of the full packet chunk that contained the packet.
-        e.chunk_data_raw     - The raw data pointer of the full packet chunk that contained the packet. (Use with FFI.)
-        e.injected           - (ReadOnly) Flag that states if the packet was injected by Ashita or an addon/plugin.
-        e.blocked            - Flag that states if the packet has been, or should be, blocked.
-    --]]
-
-    -- Look for emote packets..
     if (e.id == 0x100) then
         -- Job change update
         local jobId = struct.unpack("B", e.data, 0x05);
@@ -306,14 +291,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
         tValues.default.sparks = struct.unpack("I", e.data, 0x75);
 		tValues.default.accolades = struct.unpack('I', e.data, 0xE5);
     elseif (e.id == 0x00A) then	
-		local zoneId = struct.unpack('H', e.data, 0x30 + 1);
-		if (zoneId == 0) then
-			zoneId = struct.unpack('H', e.data, 0x42 + 1);
-		end
-        
-        if (points.loaded) then
-            UpdateFromZone(zoneId, true);
-        end				
+        zoning = true;
     elseif (e.id == 0x055) then
         --print("KI Log Update");
         local type = struct.unpack("B", e.data, 0x85);
@@ -480,16 +458,16 @@ ashita.events.register("d3d_present", "present_cb", function ()
             SetCompactVisibility(false);
         end
         return;    
+    elseif (not player.isZoning and zoning) then
+        zoning = false;
+        UpdateFromZone(currZone, true);
     elseif ((points.settings.use_compact and not compactBar.wrapper:GetVisible()) or points.use_both) then
         SetCompactVisibility(true);
-        return;
-    elseif (not points.settings.use_compact and compactBar.textObjs[1]:GetVisible() and not points.use_both) then
-        SetCompactVisibility(false);
         return;
     elseif (currZone ~= nil and currZone ~= 0 and currZone ~= lastZone) then
         lastZone = currZone;
     end
-    if (currJob ~= lastJob) then
+    if (currJob ~= lastJob and currJob ~= 0) then
         lastJob = currJob;
     end
     -----------------------------
