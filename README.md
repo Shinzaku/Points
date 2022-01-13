@@ -23,4 +23,5 @@ Available tokens:
 - [XP] [Merits] [XPHour] [XPChain] [CP] [JP] [JPHour] [CPChain] [Sparks] [Accolades] [EP] [EPHour] [EPChain]
 - [DynamisKI] [Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon] [AssaultObjective]
 - [DIV] (vertical divider) [EventTimer]
+- [Gil]
 
