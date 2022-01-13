@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.0.6";
+addon.version   = "1.1.0";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -49,13 +49,20 @@ local points = T{
     settings = settings.load(DefaultSettings)
 }
 local guiimages = images.loadTextures(points.settings.theme);
+local tokenType = "default";
 local currTokens = {};
 local globalTimer = 0;
 local tValues = {};
+local _timer = 0;
 tValues.eventTimer = 0;
 tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {}, 
                     cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0,
-                    mBreaker = false, lastEpKillTime = 0, epKills = {}, epChain = 0, estEpHour = 0, epTimer = 0, };
+                    exp = { curr = 0, max = 0 },
+                    limit = { curr = 0, points = 0, maxpoints = 0 },
+                    capacity = { curr = 0, points = 0 },
+                    mBreaker = false, lastEpKillTime = 0, epKills = {}, epChain = 0, estEpHour = 0, epTimer = 0,
+                    mastery = { curr = 0, max = 0 },
+                    };
 tValues.dynamis = { keyItems = { false, false, false, false, false } };
 tValues.abyssea = { pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0, silvery = 0, ebon = 0, };
 tValues.assault = { objective = "", timer = 0, };
@@ -207,6 +214,14 @@ ashita.events.register("command", "command_callback1", function (e)
                 compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.bg_border_color);
                 PrintMsg("Border color changed");
             end
+        elseif (args[2] == "separator") then
+            if (args[3]) then
+                points.settings.num_separator = args[3];
+                PrintMsg("Number separator set to: " .. args[3]);
+            else
+                points.settings.num_separator = "";
+                PrintMsg("Number separator cleared");
+            end            
         elseif (args[2] == "defaults") then
             points.settings.token_order_default = DefaultSettings.token_order_default;
             points.settings.token_order_mastered = DefaultSettings.token_order_mastered;
@@ -214,9 +229,9 @@ ashita.events.register("command", "command_callback1", function (e)
             UpdateFromZone(zone, false);
         elseif (args[2] == "bothbars") then
             points.use_both = not points.use_both;
-            SetCompactVisibility(points.settings.use_compact);
             if (points.use_both) then                
-                PrintMsg("Displaying both bars for testing purposes");
+                PrintMsg("Displaying both bars for testing purposes");                
+                SetCompactVisibility(true);
             else
                 PrintMsg("Reverting to single bar mode");
             end
@@ -232,59 +247,80 @@ ashita.events.register("command", "command_callback1", function (e)
 end);
 
 ----------------------------------------------------------------------------------------------------
--- func: packet_out
--- desc: Event called when the addon is processing outgoing packets.
-----------------------------------------------------------------------------------------------------
-ashita.events.register('packet_out', 'packet_out_callback1', function (e)
-    if (e.id == 0x100) then
-        -- Job change update
-        local jobId = struct.unpack("B", e.data, 0x05);
-        local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
-        UpdateFromZone(zone, true, jobId);
-    end
-end);
-
-----------------------------------------------------------------------------------------------------
 -- func: packet_in
 -- desc: Event called when the addon is processing incoming packets.
 ----------------------------------------------------------------------------------------------------
 ashita.events.register("packet_in", "packet_in_callback1", function (e)
     if (e.id == 0x02D) then
-        local val = struct.unpack("I", e.data, 0x11);
-        local val2 = struct.unpack("I", e.data, 0x15);
-		local msgId = struct.unpack("H", e.data, 0x19) % 1024;
+        local pId = struct.unpack("I", e.data_modified, 0x05);
+        local val = struct.unpack("I", e.data_modified, 0x11);
+        local val2 = struct.unpack("I", e.data_modified, 0x15);
+		local msgId = struct.unpack("H", e.data_modified, 0x19) % 1024;
         
         local killTime = os.clock();
-        if (msgId == 718 or msgId == 735) then
-            if (tValues.default.lastCpKillTime ~= 0) then
-                table.insert(tValues.default.cpKills, { time=(killTime - tValues.default.lastCpKillTime), cp=val});   
-            else
-                table.insert(tValues.default.cpKills, { time=1, cp=val});   
+        if (pId == GetPlayerEntity().ServerId) then
+            if (msgId == 718 or msgId == 735) then
+                if (tValues.default.lastCpKillTime ~= 0) then
+                    table.insert(tValues.default.cpKills, { time=(killTime - tValues.default.lastCpKillTime), cp=val});   
+                else
+                    table.insert(tValues.default.cpKills, { time=1, cp=val});   
+                end
+                tValues.default.cpChain = val2;
+                tValues.default.cpTimer = 30;
+                tValues.default.lastCpKillTime = killTime;
+                tValues.default.capacity.curr = tValues.default.capacity.curr + val;
+                if (tValues.default.capacity.curr > 30000) then
+                    tValues.default.capacity.curr = tValues.default.capacity.curr - 30000;
+                end
+            elseif (msgId == 8 or msgId == 105 or msgId == 371 or msgId == 372) then
+                if (tValues.default.lastXpKillTime ~= 0) then
+                    table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});   
+                else
+                    table.insert(tValues.default.xpKills, { time=1, xp=val});   
+                end
+                tValues.default.xpChain = val2;
+                tValues.default.xpTimer = 60;        
+                tValues.default.lastXpKillTime = killTime;
+                tValues.default.exp.curr = tValues.default.exp.curr + val;
+                tValues.default.limit.curr = tValues.default.limit.curr + val;
+                if (tValues.default.exp.curr > tValues.default.exp.max) then
+                    tValues.default.exp.curr = tValues.default.exp.max - 1;
+                end
+                if (tValues.default.limit.curr > 10000) then
+                    tValues.default.limit.curr = tValues.default.limit.curr - 10000;
+                end
+            elseif (msgId == 809 or msgId == 810) then
+                if (tValues.default.lastEpKillTime ~= 0) then
+                    table.insert(tValues.default.epKills, { time=(killTime - tValues.default.lastEpKillTime), ep=val});   
+                else
+                    table.insert(tValues.default.epKills, { time=1, ep=val});   
+                end
+                tValues.default.epChain = val2;
+                tValues.default.epTimer = 30;        
+                tValues.default.lastEpKillTime = killTime;
+                tValues.default.mastery.curr = tValues.default.mastery.curr + val;
+            elseif (msgId == 719) then
+                tValues.defaults.capacity.points = val;
+            elseif (msgId == 50 or msgId == 368) then
+                tValues.default.limit.points = val;
             end
-            tValues.default.cpChain = val2;
-            tValues.default.cpTimer = 30;
-            tValues.default.lastCpKillTime = killTime;
-        elseif (msgId == 8 or msgId == 105 or msgId == 371 or msgId == 372) then
-            if (tValues.default.lastXpKillTime ~= 0) then
-                table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});   
-            else
-                table.insert(tValues.default.xpKills, { time=1, xp=val});   
-            end
-            tValues.default.xpChain = val2;
-            tValues.default.xpTimer = 60;        
-            tValues.default.lastXpKillTime = killTime;
-        elseif (msgId == 809 or msgId == 810) then
-            if (tValues.default.lastEpKillTime ~= 0) then
-                table.insert(tValues.default.epKills, { time=(killTime - tValues.default.lastEpKillTime), ep=val});   
-            else
-                table.insert(tValues.default.epKills, { time=1, ep=val});   
-            end
-            tValues.default.epChain = val2;
-            tValues.default.epTimer = 30;        
-            tValues.default.lastEpKillTime = killTime;
         end
     elseif (e.id == 0x061) then
-        -- char stats
+        tValues.default.exp.curr = struct.unpack("H", e.data_modified, 0x011);
+        tValues.default.exp.max = struct.unpack("H", e.data_modified, 0x13);
+        tValues.default.mastery.curr = struct.unpack("I", e.data_modified, 0x69);
+        tValues.default.mastery.max = struct.unpack("I", e.data_modified, 0x6D);
+		tValues.default.accolades = math.floor(e.data_modified:byte(0x5A) / 4) + e.data_modified:byte(0x5B) * 2 ^ 6 + e.data_modified:byte(0x5C) * 2 ^ 14;        
+    elseif (e.id == 0x063) then
+        local offset = player:GetMainJob() * 6 + 13;
+        if (e.data_modified:byte(5) == 2) then
+            tValues.default.limit.curr = struct.unpack("H", e.data_modified, 9);
+            tValues.default.limit.points = e.data_modified:byte(11) % 128;
+            tValues.default.limit.maxpoints = e.data_modified:byte(0x0D) % 128;
+        elseif (e.data_modified:byte(5) == 5) then
+            tValues.default.capacity.curr = struct.unpack("H", e.data_modified, offset);
+            tValues.default.capacity.points = struct.unpack("H", e.data_modified, offset + 2);;
+        end
     elseif (e.id == 0x110) then
         tValues.default.sparks = struct.unpack("I", e.data, 0x05);
 	elseif (e.id == 0x113) then
@@ -449,8 +485,11 @@ ashita.events.register("d3d_present", "present_cb", function ()
     if (not points.loaded and GetPlayerEntity() ~= nil) then
         InitPointsBar();
         return;
+    elseif (GetPlayerEntity() == nil) then
+        return;
     end;
 
+    player = AshitaCore:GetMemoryManager():GetPlayer();
     local currJob = player:GetMainJob();
     local currZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
     if (player.isZoning or currJob == 0) then        
@@ -469,22 +508,36 @@ ashita.events.register("d3d_present", "present_cb", function ()
     end
     if (currJob ~= lastJob and currJob ~= 0) then
         lastJob = currJob;
+        UpdateFromZone(currZone, true, currJob);
     end
     -----------------------------
     -- Recalculate estimations --
     -----------------------------
-    if (#tValues.default.xpKills > 50) then
-        table.remove(tValues.default.xpKills, 1);
-    end
-    if (#tValues.default.cpKills > 50) then
-        table.remove(tValues.default.cpKills, 1);
-    end
-    if (math.floor(os.clock()) > globalTimer) then
-        globalTimer = math.floor(os.clock());
+    if (os.time() >= _timer + 1) then
+        _timer = os.time();
+        
+        -- Double check for job mastery ---
+        if (player:GetJobPointsSpent(currJob) >= 2100 and tokenType == "default") then
+            tValues.default.mBreaker = player:HasKeyItem(GetKeyItemFromName("master breaker"));
+            if (tValues.default.mBreaker) then
+                UpdateFromZone(currZone, false, currJob);
+            end
+        end
 
-        CalculateEstimates();
-        TickTimers();
+        if (#tValues.default.xpKills > 50) then
+            table.remove(tValues.default.xpKills, 1);
+        end
+        if (#tValues.default.cpKills > 50) then
+            table.remove(tValues.default.cpKills, 1);
+        end
+        if (math.floor(os.clock()) > globalTimer) then
+            globalTimer = math.floor(os.clock());
+    
+            CalculateEstimates();
+            TickTimers();
+        end
     end
+    
     if (points.settings.rate_reset_timer > 0) then
         if (tValues.default.lastXpKillTime > 0) then
             if (tValues.default.lastXpKillTime >= os.clock() + points.settings.rate_reset_timer) then
@@ -510,8 +563,9 @@ ashita.events.register("d3d_present", "present_cb", function ()
 end);
 
 function DrawPointsBar(currJob)
-    local jobLevel = player:GetMainJobLevel();
-    if (tValues.default.mBreaker) then
+    local jobLevel = player:GetMainJobLevel();    
+    local mastered = player:GetJobPointsSpent(currJob) == 2100;
+    if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
     end
     if (not points.settings.use_compact or points.use_both) then
@@ -632,8 +686,9 @@ function UpdateCompactBar(currJob)
     local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
     compactBar.jobicon.background.texture_offset_x = imgOffsetX;
     compactBar.jobicon.background.texture_offset_y = imgOffsetY;
-    local jobLevel = player:GetMainJobLevel();
-    if (tValues.default.mBreaker) then
+    local jobLevel = player:GetMainJobLevel();    
+    local mastered = player:GetJobPointsSpent(currJob) == 2100;
+    if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
     end
     compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
@@ -679,9 +734,21 @@ function SetCompactVisibility(val)
 end
 
 function InitTrackedValues()
+    local currJob = player:GetMainJob();
     tValues.default.mBreaker = player:HasKeyItem(GetKeyItemFromName("master breaker"));
-    tValues.default.sparks = 0;
+    local sparksPtr = ashita.memory.find('FFXiMain.dll',  0,  '8B4C240C8B4104??????????',  0,  0);
+    local sparksAddy = ashita.memory.read_uint32(sparksPtr + 8);
+    tValues.default.sparks = ashita.memory.read_uint32(sparksAddy);
     tValues.default.accolades = player:GetUnityPoints();
+    tValues.default.exp.curr = player:GetExpCurrent();
+    tValues.default.exp.max = player:GetExpNeeded();
+    tValues.default.limit.curr = player:GetLimitPoints();
+    tValues.default.limit.points = player:GetMeritPoints();
+    tValues.default.limit.maxpoints = player:GetMeritPointsMax();
+    tValues.default.capacity.curr = player:GetCapacityPoints(currJob);
+    tValues.default.capacity.points = player:GetJobPoints(currJob);
+    tValues.default.mastery.curr = player:GetMasteryExp();
+    tValues.default.mastery.max = player:GetMasteryExpNeeded();
     local dynaKI = {};
     dynaKI[1] = player:HasKeyItem(GetKeyItemFromName("crimson granules of time"));
     dynaKI[2] = player:HasKeyItem(GetKeyItemFromName("azure granules of time"));
@@ -754,11 +821,13 @@ end
 function UpdateFromZone(zoneId, reset, jobId)
     if (DynamisMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_dynamis, " ");
+        tokenType = "dynamis";
         if (reset) then
             tValues.eventTimer = 3600;
         end
     elseif (AbysseaMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_abyssea, " ");
+        tokenType = "abyssea";
         if (reset) then
             for i,v in pairs(tValues.abyssea) do
                 v = 0;
@@ -767,11 +836,13 @@ function UpdateFromZone(zoneId, reset, jobId)
         end
     elseif (AssaultMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_assault, " ");
+        tokenType = "assault";
         if (reset) then
             tValues.eventTimer = 1800;
         end
     elseif (NyzulMapping[zoneId] ~= nil) then
         currTokens = ashita.regex.split(points.settings.token_order_nyzul, " ");
+        tokenType = "nyzul";
     else         
         local currJob = player:GetMainJob();
         local mastered = player:GetJobPointsSpent(currJob) == 2100;
@@ -780,8 +851,10 @@ function UpdateFromZone(zoneId, reset, jobId)
         end
         if (tValues.default.mBreaker and mastered) then
             currTokens = ashita.regex.split(points.settings.token_order_mastered, " ");
+            tokenType = "mastered";
         else
             currTokens = ashita.regex.split(points.settings.token_order_default, " ");
+            tokenType = "default";
         end
         if (reset) then
             for i,v in pairs(tValues.dynamis.keyItems) do
@@ -789,6 +862,15 @@ function UpdateFromZone(zoneId, reset, jobId)
             end
             tValues.eventTimer = 0;
         end
+    end
+    
+    if (jobId) then
+        tValues.default.exp.curr = player:GetExpCurrent();
+        tValues.default.exp.max = player:GetExpNeeded();
+        tValues.default.capacity.curr = player:GetCapacityPoints(jobId);
+        tValues.default.capacity.points = player:GetJobPoints(jobId);
+        tValues.default.mastery.curr = player:GetMasteryExp();
+        tValues.default.mastery.max = player:GetMasteryExpNeeded();
     end
     
     if ((#tValues.default.xpKills > 0 or #tValues.default.cpKills > 0) and reset) then
@@ -907,31 +989,31 @@ function ParseToken(i, token)
     end
 
     if (token =="[XP]") then
-        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
             if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(player:GetLimitPoints()), SeparateNumbers(10000)));    
+                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(tValues.default.limit.curr), SeparateNumbers(10000)));    
             end            
-            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "LP", SeparateNumbers(player:GetLimitPoints()), SeparateNumbers(10000)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "LP", SeparateNumbers(tValues.default.limit.curr), SeparateNumbers(10000)));
         else
             if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(player:GetExpCurrent()), SeparateNumbers(player:GetExpNeeded())));    
+                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(tValues.default.exp.curr), SeparateNumbers(tValues.default.exp.max)));    
             end            
-            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "XP", SeparateNumbers(player:GetExpCurrent()), SeparateNumbers(player:GetExpNeeded())));
+            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "XP", SeparateNumbers(tValues.default.exp.curr), SeparateNumbers(tValues.default.exp.max)));
         end
     elseif (token =="[Merits]" and jobLevel >= 75) then
-        if (player:GetMeritPoints() == player:GetMeritPointsMax()) then
+        if (tValues.default.limit.points == tValues.default.limit.maxpoints) then
             if (not points.settings.use_compact or points.use_both) then
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", player:GetMeritPoints()));
+                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", tValues.default.limit.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(player:GetMeritPoints(), DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.limit.points, DefaultColors.FFXICappedValue)));
         else
             if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("[%d]", player:GetMeritPoints()));
+                imgui.Text(string.format("[%d]", tValues.default.limit.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, player:GetMeritPoints()));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, tValues.default.limit.points));
         end
     elseif (token =="[XPHour]") then
-        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour))));
             end
@@ -964,21 +1046,20 @@ function ParseToken(i, token)
         end
     elseif (token =="[CP]" and jobLevel >= 99) then
         if (not points.settings.use_compact or points.use_both) then
-            imgui.Text(string.format("CP: %s/%s", SeparateNumbers(player:GetCapacityPoints(currJob)), SeparateNumbers(30000)));
+            imgui.Text(string.format("CP: %s/%s", SeparateNumbers(tValues.default.capacity.curr), SeparateNumbers(30000)));
         end
-        compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "CP", SeparateNumbers(player:GetCapacityPoints(currJob)), SeparateNumbers(30000)));
+        compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "CP", SeparateNumbers(tValues.default.capacity.curr), SeparateNumbers(30000)));
     elseif (token =="[JP]" and jobLevel >= 99) then
-        local currJobPoints = player:GetJobPoints(currJob);
-        if (currJobPoints >= 500) then
+        if (tValues.default.capacity.points >= 500) then
             if (not points.settings.use_compact or points.use_both) then
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", currJobPoints));
+                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", tValues.default.capacity.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(currJobPoints, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.capacity.points, DefaultColors.FFXICappedValue)));
         else
             if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("[%d]", currJobPoints));
+                imgui.Text(string.format("[%d]", tValues.default.capacity.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, currJobPoints));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, tValues.default.capacity.points));
         end
     elseif (token =="[JPHour]" and jobLevel >= 99) then
         if (not points.settings.use_compact or points.use_both) then
@@ -1003,9 +1084,9 @@ function ParseToken(i, token)
         end        
     elseif (token == "[EP]" and tValues.default.mBreaker) then
         if (not points.settings.use_compact or points.use_both) then
-            imgui.Text(string.format("EP: %s/%s", SeparateNumbers(player:GetMasteryExp()), SeparateNumbers(player:GetMasteryExpNeeded())));
+            imgui.Text(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr), SeparateNumbers(tValues.default.mastery.max)));
         end
-        compactBar.textObjs[i]:SetText(string.format("EP: %s/%s", SeparateNumbers(player:GetMasteryExp()), SeparateNumbers(player:GetMasteryExpNeeded())));
+        compactBar.textObjs[i]:SetText(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr), SeparateNumbers(tValues.default.mastery.max)));
     elseif (token == "[EPHour]" and tValues.default.mBreaker) then
         if (not points.settings.use_compact or points.use_both) then
             imgui.Text(string.format("(%s EP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estEpHour))));
@@ -1220,6 +1301,14 @@ function ParseToken(i, token)
                 imgui.Text(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
+        end
+    elseif (token == "[Gil]") then
+        local gil = AshitaCore:GetMemoryManager():GetInventory():GetContainerItem(0, 0);
+        if (gil) then
+            if (not points.settings.use_compact or points.use_both) then
+                imgui.Text(string.format("%s G", SeparateNumbers(gil.Count)));
+            end
+            compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count)));   
         end
     elseif (token =="[DIV]") then
         if (not points.settings.use_compact or points.use_both) then
