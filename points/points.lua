@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.1.0";
+addon.version   = "1.1.1";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -300,7 +300,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 tValues.default.lastEpKillTime = killTime;
                 tValues.default.mastery.curr = tValues.default.mastery.curr + val;
             elseif (msgId == 719) then
-                tValues.defaults.capacity.points = val;
+                tValues.default.capacity.points = val;
             elseif (msgId == 50 or msgId == 368) then
                 tValues.default.limit.points = val;
             end
