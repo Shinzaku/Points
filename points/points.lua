@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.1.1";
+addon.version   = "1.1.2";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -1171,7 +1171,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Pearl:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.pearlescent, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.pearlescent));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Pearl", EncodeColor(tValues.abyssea.pearlescent, DefaultColors.FFXICappedValue)));
         else
@@ -1187,7 +1187,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Azure:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.azure, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.azure));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Azure", EncodeColor(tValues.abyssea.azure, DefaultColors.FFXICappedValue)));
         else
@@ -1203,7 +1203,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Ruby:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.ruby, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.ruby));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ruby", EncodeColor(tValues.abyssea.ruby, DefaultColors.FFXICappedValue)));
         else
@@ -1219,7 +1219,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Amber:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.amber, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.amber));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Amber", EncodeColor(tValues.abyssea.amber, DefaultColors.FFXICappedValue)));
         else
@@ -1235,7 +1235,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Gold:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.golden, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.golden));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Gold", EncodeColor(tValues.abyssea.golden, DefaultColors.FFXICappedValue)));
         else
@@ -1251,7 +1251,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Silver:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.silvery, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.silver));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Silver", EncodeColor(tValues.abyssea.silvery, DefaultColors.FFXICappedValue)));
         else
@@ -1267,7 +1267,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Ebon:");
                 imgui.SameLine();
-                imgui.TextColored(EncodeColor(tValues.abyssea.ebon, DefaultColors.FFXICappedValue));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.ebon));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ebon", EncodeColor(tValues.abyssea.ebon, DefaultColors.FFXICappedValue)));
         else
