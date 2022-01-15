@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.1.2";
+addon.version   = "1.1.3";
 addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -406,6 +406,7 @@ ashita.events.register('text_in', 'text_in_callback1', function (e)
                 return;
             end
         elseif (AbysseaMapping[lastZone] ~= nil) then
+            debugText = debugText .. "\n" .. e.message;
             results = ashita.regex.search(e.message, MessageMatch.AbysseaTime);
             if (results ~= nil) then
                 local timeLeft = tonumber(results[1][2]);
@@ -423,15 +424,11 @@ ashita.events.register('text_in', 'text_in_callback1', function (e)
             if (results ~= nil) then
                 tValues.abyssea.pearlescent = tonumber(results[1][2]);
                 tValues.abyssea.ebon = tonumber(results[1][3]);
+                tValues.abyssea.golden = tonumber(results[1][4]);
+                tValues.abyssea.silvery = tonumber(results[1][5]);
                 return;
             end
             results = ashita.regex.search(e.message, MessageMatch.AbysseaRestLights2);
-            if (results ~= nil) then
-                tValues.abyssea.golden = tonumber(results[1][2]);
-                tValues.abyssea.silvery = tonumber(results[1][3]);
-                return;
-            end
-            results = ashita.regex.search(e.message, MessageMatch.AbysseaRestLights3);
             if (results ~= nil) then
                 tValues.abyssea.azure = tonumber(results[1][2]);
                 tValues.abyssea.ruby = tonumber(results[1][3]);
@@ -1251,7 +1248,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact or points.use_both) then
                 imgui.Text("Silver:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.silver));
+                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.silvery));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Silver", EncodeColor(tValues.abyssea.silvery, DefaultColors.FFXICappedValue)));
         else
@@ -1343,7 +1340,8 @@ function DrawConfigWindow()
     local strTokenDynamis = "";
     if(points.config_is_open and imgui.Begin("Points Configuration", points.config_is_open, bit.bor(ImGuiWindowFlags_NoSavedSettings))) then
         imgui.Text("Token Displays:");
-
+        imgui.Text("Debug: ");
+        imgui.Text(debugText);
         imgui.End();
     end
     imgui.PopStyleVar(1);
