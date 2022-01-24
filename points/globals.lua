@@ -1,20 +1,7 @@
--- HelpString = "\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
---              "\30\67- \30\71compact\30\67 - Enables/disables the compact bar\n" ..
---              "\30\67Check the configuration window for all available options\n" ..
---              "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Ashita4-Addons/points/";
-
-HelpString = "\30\67- \30\71fsize\30\67 - Sets compact bar font size\n" ..
-             "\30\67- \30\71ffamily\30\67 - Sets compact bar font family\n" ..
-             "\30\67- \30\71compact\30\67 - Toggles the compact bar\n" ..
-             "\30\67- \30\71theme\30\67 - Sets icon theme to the given folder name (need to reload; see default)\n" ..
-             --"\30\67- \30\71color\30\67 - Sets default font color to r g b a values (0 - 255)\n" ..
-             "\30\67- \30\71bgcolor\30\67 - Sets background color to r g b a values (0 - 255) or default\n" ..
-             "\30\67- \30\71border\30\67 - Sets border color to r g b a values (0 - 255) or default\n" ..
-             "\30\67- \30\71rtimer\30\67 - Sets XP and CP rate reset timer in seconds; Setting 0 will disable\n" ..
-             "\30\67- \30\71separator\30\67 - Sets digit separator (ie. 3000 vs 3,000) with input given; No input will clear it\n" ..
-             --"\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
-             "\30\67Click (or shift-click for compact) and drag to reposition\n\30\67Configuration is saved when unloaded\n" ..
-             "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Points";
+HelpString = "\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
+             "\30\67- \30\71compact\30\67 - Enables/disables the compact bar\n" ..
+             "\30\67Check the configuration window for all available options\n" ..
+             "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Ashita4-Addons/points/";
 
 DefaultColors = {}
 DefaultColors.FFXICappedValue = { 0.23, 0.67, 0.91, 1.0 };
@@ -32,7 +19,7 @@ DefaultColors.FFXIDarkGrey = { 0.25, 0.25, 0.25, 1.0 };
 
 TemplateRatio = "%s: %s/%s";
 DefaultSettings = T{
-    use_compact = false,
+    use_compact_ui = { false, },
     compact = T{
         hPadding = 8,
         x = 0,
@@ -47,21 +34,25 @@ DefaultSettings = T{
     font_scale = 1.0,
     bar_x = 130,
     bar_y = 15,
-    decimal = ".",
     num_separator = "",
     bar_divider = "\xef\x85\x82",
     compact_divider = "|",
-    bg_color = DefaultColors.FFXIGreyBg,
-    bg_border_color = DefaultColors.FFXIGreyBorder,
     token_order_default = "[XP] [Merits] [XPHour] [XPChain] [DIV] [CP] [JP] [JPHour] [CPChain] [DIV] [Sparks] [DIV] [Accolades] [DIV] [Gil]",
     token_order_mastered = "[EP] [EPHour] [EPChain] [DIV] [CP] [JP] [JPHour] [CPChain] [DIV] [Sparks] [DIV] [Accolades] [DIV] [Gil]",
+    token_enabled_mastered = { true, },
     token_order_dynamis = "[DynamisKI] [DIV] [EventTimer]",
+    token_enabled_dynamis = { true, },
     token_order_abyssea = "[Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon] [DIV] [EventTimer]",
+    token_enabled_abyssea = { true, },
     token_order_assault = "[AssaultObjective] [DIV] [EventTimer]",
+    token_enabled_assault = { true, },
     token_order_nyzul = "[NyzulFloor] [DIV] [NyzulObjective] [DIV] [EventTimer]",
+    token_enabled_nyzul = { true, },
     token_order_voidwatch = "[VWRed] [VWBlue] [VWGreen] [VWYellow] [VWWhite]",
+    token_enabled_voidwatch = { true, },
     theme = "default",
     rate_reset_timer = 600,
+    colors = { mainText = { 1.0, 1.0, 1.0, 1.0 }, cappedValue = DefaultColors.FFXICappedValue, chainTimer = DefaultColors.FFXIYellow, bg = DefaultColors.FFXIGreyBg, bgBorder = DefaultColors.FFXIGreyBorder },
 }
 WrapperSettings = T{
     visible = true,

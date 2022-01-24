@@ -25,25 +25,26 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "1.1.3";
-addon.desc      = "Various resource point and event tracking; Includes XP, CP, Abyssea lights, Dynamis KI and time, Assault objectives and time, Nyzul Isle floor and time";
+addon.version   = "2.0.0";
+addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
 require "common";
 require "globals";
+require "helpers";
 local images = require("images");
 local ffi = require("ffi");
 local imgui = require("imgui");
 local fonts = require("fonts");
 local settings = require("settings");
+local config = require("config");
 
 local player = AshitaCore:GetMemoryManager():GetPlayer();
 local lastJob = 0;
 local lastZone = 0;
 local points = T{
     loaded = false,
-    bar_is_open = true,
-    config_is_open = false,
+    bar_is_open = { true, },
     window_suffix = "",
     use_both = false,
     settings = settings.load(DefaultSettings)
@@ -100,7 +101,7 @@ settings.register('settings', 'settings_update', UpdateSettings);
 -- func: load
 -- desc: Event called when the addon is being loaded.
 ----------------------------------------------------------------------------------------------------
-ashita.events.register("load", "load_callback1", function () 
+ashita.events.register("load", "load_callback1", function ()
     local playerEntity = GetPlayerEntity();
     if (player ~= nil and playerEntity ~= nil) then
         InitPointsBar();
@@ -131,106 +132,21 @@ ashita.events.register("command", "command_callback1", function (e)
     else
         e.blocked = true;
         if (args[2] == "config") then
-            points.config_is_open = not points.config_is_open;
+            config.uiSettings.is_open[1] = not config.uiSettings.is_open[1];
         elseif (args[2] == "compact") then
-            points.settings.use_compact = not points.settings.use_compact;
+            points.settings.use_compact_ui[1] = not points.settings.use_compact_ui[1];
             if (not points.use_both) then
-                SetCompactVisibility(points.settings.use_compact);
+                SetCompactVisibility(points.settings.use_compact_ui[1]);
             end;
-            if (points.settings.use_compact) then
+            if (points.settings.use_compact_ui[1]) then
                 PrintMsg("Displaying compact bar");
             else
                 PrintMsg("Reverting to default bar");
             end
-        elseif (args[2] == "fsize") then
-            local newSize = tonumber(args[3]);
-            if (newSize ~= nil) then
-                points.settings.compact.font.font_height = newSize;
-                for i,v in pairs(compactBar.textObjs) do
-                    v.font_height = newSize;
-                end
-                PrintMsg("Updating font size");
-            else
-                PrintMsg("Invalid font size");
-            end;            
-        elseif (args[2] == "ffamily") then
-            table.remove(args, 1);
-            table.remove(args, 1);
-            local newFamily = table.concat(args, " ");
-            points.settings.compact.font.font_family = newFamily;
-            for i,v in pairs(compactBar.textObjs) do
-                v.font_family = newFamily;
-            end
-            PrintMsg("Attempting to update font family");
-        elseif (args[2] == "theme") then
-            table.remove(args, 1);
-            table.remove(args, 1);
-            local newTheme = table.concat(args, "-");
-            if (ashita.fs.exists(addon.path .. "/themes/" .. newTheme)) then
-                points.settings.theme = newTheme;
-                PrintMsg("Changed theme folder to: " .. newTheme);
-            else
-                PrintMsg("Unable to find requested theme folder");
-            end;
-        elseif (args[2] == "bgcolor") then
-            local r, g, b, a;
-            if (args[3] == "default") then
-                r = DefaultColors.FFXIGreyBg[1] * 255;
-                g = DefaultColors.FFXIGreyBg[2] * 255;
-                b = DefaultColors.FFXIGreyBg[3] * 255;
-                a = DefaultColors.FFXIGreyBg[4] * 255;
-            else
-                r = tonumber(args[3]);
-                g = tonumber(args[4]);
-                b = tonumber(args[5]);
-                a = tonumber(args[6]);
-            end;
-            
-            if (r == nil or g == nil or b == nil or a  == nil) then
-                PrintMsg("Invalid values for color");
-            else
-                points.settings.bg_color = { (r / 255), (g / 255), (b / 255), (a / 255) };
-                compactBar.wrapper.background.color = RGBAtoHex(points.settings.bg_color);
-                PrintMsg("Background color changed");
-            end
-        elseif (args[2] == "border") then
-            local r, g, b, a;
-            if (args[3] == "default") then
-                r = DefaultColors.FFXIGreyBorder[1] * 255;
-                g = DefaultColors.FFXIGreyBorder[2] * 255;
-                b = DefaultColors.FFXIGreyBorder[3] * 255;
-                a = DefaultColors.FFXIGreyBorder[4] * 255;
-            else
-                r = tonumber(args[3]);
-                g = tonumber(args[4]);
-                b = tonumber(args[5]);
-                a = tonumber(args[6]);
-            end;
-
-            if (r == nil or g == nil or b == nil or a  == nil) then
-                PrintMsg("Invalid values for color");
-            else
-                points.settings.bg_border_color = { r / 255, g / 255, b / 255, a / 255 };
-                compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.bg_border_color);
-                PrintMsg("Border color changed");
-            end
-        elseif (args[2] == "separator") then
-            if (args[3]) then
-                points.settings.num_separator = args[3];
-                PrintMsg("Number separator set to: " .. args[3]);
-            else
-                points.settings.num_separator = "";
-                PrintMsg("Number separator cleared");
-            end            
-        elseif (args[2] == "defaults") then
-            points.settings.token_order_default = DefaultSettings.token_order_default;
-            points.settings.token_order_mastered = DefaultSettings.token_order_mastered;
-            local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
-            UpdateFromZone(zone, false);
         elseif (args[2] == "bothbars") then
             points.use_both = not points.use_both;
             if (points.use_both) then                
-                PrintMsg("Displaying both bars for testing purposes");                
+                PrintMsg("Displaying both bars for testing purposes");
                 SetCompactVisibility(true);
             else
                 PrintMsg("Reverting to single bar mode");
@@ -241,8 +157,6 @@ ashita.events.register("command", "command_callback1", function (e)
         elseif (args[2] == nil or args[2] == "help") then
             PrintMsg("Help and available commands:\n" .. HelpString);
         end
-
-        return;
     end
 end);
 
@@ -496,16 +410,17 @@ ashita.events.register("d3d_present", "present_cb", function ()
         return;    
     elseif (not player.isZoning and zoning) then
         zoning = false;
-        UpdateFromZone(currZone, true);
-    elseif ((points.settings.use_compact and not compactBar.wrapper:GetVisible()) or points.use_both) then
+        UpdateTokenList(currZone, true);
+    elseif ((points.settings.use_compact_ui[1] and not compactBar.wrapper:GetVisible()) or points.use_both) then
         SetCompactVisibility(true);
-        return;
+    elseif (not points.settings.use_compact_ui[1] and compactBar.wrapper:GetVisible() and not points.use_both) then
+        SetCompactVisibility(false);
     elseif (currZone ~= nil and currZone ~= 0 and currZone ~= lastZone) then
         lastZone = currZone;
     end
     if (currJob ~= lastJob and currJob ~= 0) then
         lastJob = currJob;
-        UpdateFromZone(currZone, true, currJob);
+        UpdateTokenList(currZone, true, currJob);
     end
     -----------------------------
     -- Recalculate estimations --
@@ -517,7 +432,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
         if (player:GetJobPointsSpent(currJob) >= 2100 and tokenType == "default") then
             tValues.default.mBreaker = player:HasKeyItem(GetKeyItemFromName("master breaker"));
             if (tValues.default.mBreaker) then
-                UpdateFromZone(currZone, false, currJob);
+                UpdateTokenList(currZone, false, currJob);
             end
         end
 
@@ -556,7 +471,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
     -------------------
     -- Config window --
     -------------------
-    DrawConfigWindow();    
+    config.drawWindow(points.settings);
 end);
 
 function DrawPointsBar(currJob)
@@ -565,16 +480,17 @@ function DrawPointsBar(currJob)
     if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
     end
-    if (not points.settings.use_compact or points.use_both) then
+    if (not points.settings.use_compact_ui[1] or points.use_both) then
         imgui.SetNextWindowSize({ -1, 32 }, ImGuiCond_Always);
         imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_FirstUseEver);    
     end    
-    imgui.PushStyleColor(ImGuiCol_WindowBg, points.settings.bg_color);
-    imgui.PushStyleColor(ImGuiCol_Border, points.settings.bg_border_color);
+    imgui.PushStyleColor(ImGuiCol_WindowBg, points.settings.colors.bg);
+    imgui.PushStyleColor(ImGuiCol_Border, points.settings.colors.bgBorder);
     imgui.PushStyleColor(ImGuiCol_BorderShadow, { 1.0, 0.0, 0.0, 1.0});
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-    if((not points.settings.use_compact or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration))) then        
+    if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration))) then        
         imgui.PopStyleColor(3);
+        imgui.PushStyleColor(ImGuiCol_Text, points.settings.colors.mainText);
         -----------------------------------------
         -- Left image icon, with job and level --
         -----------------------------------------
@@ -610,7 +526,8 @@ function DrawPointsBar(currJob)
         end
     
         imgui.SameLine();
-        imgui.Text(" ");        
+        imgui.Text(" ");
+        imgui.PopStyleColor(1);
         imgui.End();
     else
         imgui.PopStyleColor(3);
@@ -621,20 +538,20 @@ end
 function LoadCompactBar()
     compactBar.wrapper.auto_resize = false;
     compactBar.wrapper.background.visible = true;
-    compactBar.wrapper.background.color = RGBAtoHex(points.settings.bg_color);
+    compactBar.wrapper.background.color = RGBAtoHex(points.settings.colors.bg);
     compactBar.wrapper.background.border_flags = 15;
-    compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.bg_border_color);
+    compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     local bSizes = RECT.new();
     bSizes.top = 1.0;
     bSizes.left = 1.0;
     bSizes.right = 1.0;
     bSizes.bottom = 1.0;
-    compactBar.wrapper.background.border_sizes = bSizes;    
+    compactBar.wrapper.background.border_sizes = bSizes;
     compactBar.wrapper.background.border_visible = true;
     compactBar.wrapper.lockedz = true;  
     compactBar.wrapper.position_x = points.settings.compact.x;
     compactBar.wrapper.position_y = points.settings.compact.y;
-    compactBar.wrapper.visible = points.settings.use_compact;
+    compactBar.wrapper.visible = points.settings.use_compact_ui[1];
 
     compactBar.jobicon.auto_resize = false;
     compactBar.jobicon.can_focus = false;
@@ -642,10 +559,10 @@ function LoadCompactBar()
     compactBar.jobicon.font_family = "Consolas";
     compactBar.jobicon.color_outline = 0xFF000000;
     compactBar.jobicon.background.visible = true;
-    compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));    
+    compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));
     compactBar.jobicon.background.width = 64;
     compactBar.jobicon.background.height = 16;
-    compactBar.jobicon.visible = points.settings.use_compact;
+    compactBar.jobicon.visible = points.settings.use_compact_ui[1];
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
@@ -653,7 +570,7 @@ function LoadCompactBar()
         compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
         compactBar.textObjs[i].can_focus = false;
         compactBar.textObjs[i].parent = compactBar.wrapper;
-        compactBar.textObjs[i].visible = points.settings.use_compact;
+        compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
     end
 end
 
@@ -671,7 +588,7 @@ function UpdateCompactBar(currJob)
         for i=#compactBar.textObjs + 1,#currTokens,1 do
             compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
             compactBar.textObjs[i].can_focus = false;
-            compactBar.textObjs[i].visible = points.settings.use_compact;
+            compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
             compactBar.textObjs[i].parent = compactBar.wrapper;
         end
     end
@@ -691,14 +608,24 @@ function UpdateCompactBar(currJob)
     compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
     -------------------------------------------
     -- These values are already being calculated while default bar is displayed; Ensures the tokens are parsed otherwise --
-    if (points.settings.use_compact and not points.use_both) then
+    if (points.settings.use_compact_ui[1] and not points.use_both) then
         for i,v in pairs(currTokens) do
             ParseToken(i, v);
         end
     end
     -------------------------------------------
-    local lastSize = SIZE.new();
+    local lastSize = SIZE.new();    
+    compactBar.wrapper.background.color = RGBAtoHex(points.settings.colors.bg);
+    compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     for i,v in pairs(compactBar.textObjs) do
+        v.color = RGBAtoHex(points.settings.colors.mainText);
+        if (v.font_height ~= points.settings.compact.font.font_height) then
+            v.font_height = points.settings.compact.font.font_height;
+        end
+        if (v.font_family ~= points.settings.compact.font.font_family) then
+            v.font_family = points.settings.compact.font.font_family;
+        end
+
         v:GetTextSize(lastSize);
         if (i > 1 and v.text ~= "") then
             v.position_x = totalSize.cx + points.settings.compact.hPadding;
@@ -716,8 +643,10 @@ function UpdateCompactBar(currJob)
         compactBar.wrapper.background.height = 16;
     end;
 
-    points.settings.compact.x = compactBar.wrapper.position_x;
-    points.settings.compact.y = compactBar.wrapper.position_y;
+    --points.settings.compact.x = compactBar.wrapper.position_x;
+    --points.settings.compact.y = compactBar.wrapper.position_y;
+    compactBar.wrapper.position_x = points.settings.compact.x;
+    compactBar.wrapper.position_y = points.settings.compact.y;
 end
 
 function SetCompactVisibility(val)
@@ -815,14 +744,14 @@ function TickTimers()
     end
 end
 
-function UpdateFromZone(zoneId, reset, jobId)
-    if (DynamisMapping[zoneId] ~= nil) then
+function UpdateTokenList(zoneId, reset, jobId)
+    if (DynamisMapping[zoneId] ~= nil and points.settings.token_enabled_dynamis) then
         currTokens = ashita.regex.split(points.settings.token_order_dynamis, " ");
         tokenType = "dynamis";
         if (reset) then
             tValues.eventTimer = 3600;
         end
-    elseif (AbysseaMapping[zoneId] ~= nil) then
+    elseif (AbysseaMapping[zoneId] ~= nil and points.settings.token_enabled_abyssea) then
         currTokens = ashita.regex.split(points.settings.token_order_abyssea, " ");
         tokenType = "abyssea";
         if (reset) then
@@ -831,22 +760,22 @@ function UpdateFromZone(zoneId, reset, jobId)
             end
             tValues.eventTimer = 300;
         end
-    elseif (AssaultMapping[zoneId] ~= nil) then
+    elseif (AssaultMapping[zoneId] ~= nil and points.settings.token_enabled_assault) then
         currTokens = ashita.regex.split(points.settings.token_order_assault, " ");
         tokenType = "assault";
         if (reset) then
             tValues.eventTimer = 1800;
         end
-    elseif (NyzulMapping[zoneId] ~= nil) then
+    elseif (NyzulMapping[zoneId] ~= nil and points.settings.token_enabled_nyzul) then
         currTokens = ashita.regex.split(points.settings.token_order_nyzul, " ");
         tokenType = "nyzul";
-    else         
+    else
         local currJob = player:GetMainJob();
         local mastered = player:GetJobPointsSpent(currJob) == 2100;
         if (jobId) then
             mastered = player:GetJobPointsSpent(jobId) == 2100;
         end
-        if (tValues.default.mBreaker and mastered) then
+        if (tValues.default.mBreaker and mastered and points.settings.token_enabled_mastered) then
             currTokens = ashita.regex.split(points.settings.token_order_mastered, " ");
             tokenType = "mastered";
         else
@@ -912,67 +841,6 @@ function UpdateAbysseaLights(strength, light)
     tValues.abyssea[light] = math.min(tValues.abyssea[light] + AbysseaLightEstimates[light][strength], AbysseaLightEstimates[light].max);
 end;
 
-function GetKeyItemFromName(name)
-    local findKI = AshitaCore:GetResourceManager():GetString("keyitems.names", name, 2);
-    if (findKI ~= nil) then
-        return findKI;
-    end
-    return -1;
-end
-
-function GetHMS(seconds)
-    local timeExtract = {
-        hr = 0,
-        min = 0,
-        sec = 0,
-    };
-    if (seconds > 0) then
-        timeExtract.hr = seconds / 3600;
-        timeExtract.min = (math.fmod(seconds, 3600)) / 60;
-        timeExtract.sec = math.fmod(math.fmod(seconds, 3600), 60);
-    end
-
-    return timeExtract;
-end
-
-function AbbreviateNum(val)
-    local abbreviated = "";
-    if (val >= 100000 and val < 1000000) then
-        abbreviated = string.format("%.1fK", val / 1000);
-    elseif (val >= 1000000) then
-        abbreviated = string.format("%.1fM", val / 1000000);
-    else
-        abbreviated = string.format("%d", val);
-    end
-
-    return abbreviated;
-end
-
-function SeparateNumbers(val)
-    local separated = string.gsub(val, "(%d)(%d%d%d)$", "%1" .. points.settings.num_separator .. "%2", 1)
-    local found = 0;
-    while true do
-        separated, found = string.gsub(separated, "(%d)(%d%d%d),", "%1" .. points.settings.num_separator .. "%2,", 1)
-        if found == 0 then break end
-    end
-    return separated;
-end
-
-function RGBAtoHex(colorTable)
-    local r, g, b, a;
-    r = string.format("%02X", math.floor(255 * colorTable[1]));
-    g = string.format("%02X", math.floor(255 * colorTable[2]));
-    b = string.format("%02X", math.floor(255 * colorTable[3]));
-    a = string.format("%02X", math.floor(255 * colorTable[4]));
-	
-	local addString = a .. r .. g .. b;
-	return tonumber(addString, 16);
-end
-
-function EncodeColor(text, rgba)
-    return string.format("|c%X|%s|r", RGBAtoHex(rgba), text);
-end
-
 function PrintMsg(msg)
     print(string.format("[\30\08Points\30\1] \30\67%s", msg));
 end;
@@ -980,6 +848,7 @@ end;
 function ParseToken(i, token)
     local jobLevel = player:GetMainJobLevel();
     local currJob = player:GetMainJob();
+    local sep = points.settings.num_separator;
 
     if (compactBar.textObjs[i] == nil) then
         return;
@@ -987,37 +856,37 @@ function ParseToken(i, token)
 
     if (token =="[XP]") then
         if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(tValues.default.limit.curr), SeparateNumbers(10000)));    
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep)));    
             end            
-            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "LP", SeparateNumbers(tValues.default.limit.curr), SeparateNumbers(10000)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "LP", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep)));
         else
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(tValues.default.exp.curr), SeparateNumbers(tValues.default.exp.max)));    
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(tValues.default.exp.curr, sep), SeparateNumbers(tValues.default.exp.max, sep)));    
             end            
-            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "XP", SeparateNumbers(tValues.default.exp.curr), SeparateNumbers(tValues.default.exp.max)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "XP", SeparateNumbers(tValues.default.exp.curr, sep), SeparateNumbers(tValues.default.exp.max, sep)));
         end
     elseif (token =="[Merits]" and jobLevel >= 75) then
         if (tValues.default.limit.points == tValues.default.limit.maxpoints) then
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", tValues.default.limit.points));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.TextColored(points.settings.colors.cappedValue, string.format("[%d]", tValues.default.limit.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.limit.points, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.limit.points, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format("[%d]", tValues.default.limit.points));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateBracket, tValues.default.limit.points));
         end
     elseif (token =="[XPHour]") then
         if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour))));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour), sep)));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estXpHour), "LP"));
         else
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("(%s XP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour))));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("(%s XP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour), sep)));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estXpHour), "XP"));
         end
@@ -1027,14 +896,14 @@ function ParseToken(i, token)
             label = "LP";
         end
         if (tValues.default.xpTimer > 0) then
-            if (not points.settings.use_compact or points.use_both) then                
+            if (not points.settings.use_compact_ui[1] or points.use_both) then                
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXIYellow, string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
+                imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.xpChain, DefaultColors.FFXIYellow), EncodeColor(tValues.default.xpTimer, DefaultColors.FFXIYellow)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.xpChain, points.settings.colors.chainTimer), EncodeColor(tValues.default.xpTimer, points.settings.colors.chainTimer)));
         else
-            if (not points.settings.use_compact or points.use_both) then                
+            if (not points.settings.use_compact_ui[1] or points.use_both) then                
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
                 imgui.Text(string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
@@ -1042,37 +911,37 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, tValues.default.xpChain, tValues.default.xpTimer));
         end
     elseif (token =="[CP]" and jobLevel >= 99) then
-        if (not points.settings.use_compact or points.use_both) then
-            imgui.Text(string.format("CP: %s/%s", SeparateNumbers(tValues.default.capacity.curr), SeparateNumbers(30000)));
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(string.format("CP: %s/%s", SeparateNumbers(tValues.default.capacity.curr, sep), SeparateNumbers(30000, sep)));
         end
-        compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "CP", SeparateNumbers(tValues.default.capacity.curr), SeparateNumbers(30000)));
+        compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "CP", SeparateNumbers(tValues.default.capacity.curr, sep), SeparateNumbers(30000, sep)));
     elseif (token =="[JP]" and jobLevel >= 99) then
         if (tValues.default.capacity.points >= 500) then
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("[%d]", tValues.default.capacity.points));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.TextColored(points.settings.colors.cappedValue, string.format("[%d]", tValues.default.capacity.points));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.capacity.points, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateBracket, EncodeColor(tValues.default.capacity.points, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format("[%d]", tValues.default.capacity.points));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateBracket, tValues.default.capacity.points));
         end
     elseif (token =="[JPHour]" and jobLevel >= 99) then
-        if (not points.settings.use_compact or points.use_both) then
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.Text(string.format("(%.1f JP/hr)", tValues.default.estJpHour));
         end
         compactBar.textObjs[i]:SetText(string.format(TemplateRate, tValues.default.estJpHour, "JP"));
     elseif (token =="[CPChain]" and jobLevel >= 99) then        
         if (tValues.default.cpTimer > 0) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("CP\xef\x83\x81>");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXIYellow, string.format("%d (%ds)", tValues.default.cpChain, tValues.default.cpTimer));
+                imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%ds)", tValues.default.cpChain, tValues.default.cpTimer));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateChain, "CP", EncodeColor(tValues.default.cpChain, DefaultColors.FFXIYellow), EncodeColor(tValues.default.cpTimer, DefaultColors.FFXIYellow)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, "CP", EncodeColor(tValues.default.cpChain, points.settings.colors.chainTimer), EncodeColor(tValues.default.cpTimer, points.settings.colors.chainTimer)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("CP\xef\x83\x81>");
                 imgui.SameLine();
                 imgui.Text(string.format("%d (%ds)", tValues.default.cpChain, tValues.default.cpTimer));
@@ -1080,26 +949,26 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(string.format(TemplateChain, "CP", tValues.default.cpChain, tValues.default.cpTimer));
         end        
     elseif (token == "[EP]" and tValues.default.mBreaker) then
-        if (not points.settings.use_compact or points.use_both) then
-            imgui.Text(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr), SeparateNumbers(tValues.default.mastery.max)));
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr, sep), SeparateNumbers(tValues.default.mastery.max, sep)));
         end
-        compactBar.textObjs[i]:SetText(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr), SeparateNumbers(tValues.default.mastery.max)));
+        compactBar.textObjs[i]:SetText(string.format("EP: %s/%s", SeparateNumbers(tValues.default.mastery.curr, sep), SeparateNumbers(tValues.default.mastery.max, sep)));
     elseif (token == "[EPHour]" and tValues.default.mBreaker) then
-        if (not points.settings.use_compact or points.use_both) then
-            imgui.Text(string.format("(%s EP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estEpHour))));
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(string.format("(%s EP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estEpHour), sep)));
         end
         compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estEpHour), "EP"));
     elseif (token == "[EPChain]" and tValues.default.mBreaker) then
         local label = "EP";
         if (tValues.default.epTimer > 0) then
-            if (not points.settings.use_compact or points.use_both) then                
+            if (not points.settings.use_compact_ui[1] or points.use_both) then                
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXIYellow, string.format("%d (%ds)", tValues.default.epChain, tValues.default.epTimer));
+                imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%ds)", tValues.default.epChain, tValues.default.epTimer));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.epChain, DefaultColors.FFXIYellow), EncodeColor(tValues.default.epTimer, DefaultColors.FFXIYellow)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.epChain, points.settings.colors.chainTimer), EncodeColor(tValues.default.epTimer, points.settings.colors.chainTimer)));
         else
-            if (not points.settings.use_compact or points.use_both) then                
+            if (not points.settings.use_compact_ui[1] or points.use_both) then                
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
                 imgui.Text(string.format("%d (%ds)", tValues.default.epChain, tValues.default.epTimer));
@@ -1108,50 +977,50 @@ function ParseToken(i, token)
         end
     elseif (token =="[Sparks]") then
         if (tValues.default.sparks == 99999) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("\xef\x83\xa7:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("%d ", tValues.default.sparks));
+                imgui.TextColored(points.settings.colors.cappedValue, string.format("%d ", tValues.default.sparks));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Spk", EncodeColor(SeparateNumbers(tValues.default.sparks), DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Spk", EncodeColor(SeparateNumbers(tValues.default.sparks, sep), points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("\xef\x83\xa7:");
                 imgui.SameLine();
-                imgui.Text(string.format("%s", SeparateNumbers(tValues.default.sparks)));
+                imgui.Text(string.format("%s", SeparateNumbers(tValues.default.sparks, sep)));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Spk", SeparateNumbers(tValues.default.sparks)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Spk", SeparateNumbers(tValues.default.sparks, sep)));
         end
     elseif (token =="[Accolades]") then        
         if (tValues.default.accolades == 99999) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("\xef\x96\xa2:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, string.format("%d ", tValues.default.accolades));
+                imgui.TextColored(points.settings.colors.cappedValue, string.format("%d ", tValues.default.accolades));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Acc", EncodeColor(SeparateNumbers(tValues.default.accolades), DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Acc", EncodeColor(SeparateNumbers(tValues.default.accolades, sep), points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("\xef\x96\xa2:");
                 imgui.SameLine();
-                imgui.Text(string.format("%s", SeparateNumbers(tValues.default.accolades)));
+                imgui.Text(string.format("%s", SeparateNumbers(tValues.default.accolades, sep)));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Acc", SeparateNumbers(tValues.default.accolades)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Acc", SeparateNumbers(tValues.default.accolades, sep)));
         end
     elseif (token =="[DynamisKI]") then
         local outCompact = "";
         for i,v in pairs(tValues.dynamis.keyItems) do
-            if (i > 1 and (not points.settings.use_compact or points.use_both)) then
+            if (i > 1 and (not points.settings.use_compact_ui[1] or points.use_both)) then
                 imgui.SameLine();
             end;
 
             if (v) then
-                if (not points.settings.use_compact or points.use_both) then
+                if (not points.settings.use_compact_ui[1] or points.use_both) then
                     imgui.Text("\xef\x89\x92");
                 end
                 outCompact = outCompact .. "O";
             else
-                if (not points.settings.use_compact or points.use_both) then
+                if (not points.settings.use_compact_ui[1] or points.use_both) then
                     imgui.TextColored(DefaultColors.FFXILightGrey, "\xef\x89\x94");
                 end
                 outCompact = outCompact .. EncodeColor("X", DefaultColors.FFXILightGrey);
@@ -1165,14 +1034,14 @@ function ParseToken(i, token)
         compactBar.textObjs[i]:SetText(outCompact);
     elseif (token =="[Pearl]") then        
         if (tValues.abyssea.pearlescent >= 230) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Pearl:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.pearlescent));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.pearlescent));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Pearl", EncodeColor(tValues.abyssea.pearlescent, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Pearl", EncodeColor(tValues.abyssea.pearlescent, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Pearl:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.pearlescent));
@@ -1181,14 +1050,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Azure]") then
         if (tValues.abyssea.azure >= 255) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Azure:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.azure));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.azure));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Azure", EncodeColor(tValues.abyssea.azure, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Azure", EncodeColor(tValues.abyssea.azure, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Azure:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.azure));
@@ -1197,14 +1066,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Ruby]") then
         if (tValues.abyssea.ruby >= 255) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Ruby:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.ruby));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.ruby));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ruby", EncodeColor(tValues.abyssea.ruby, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ruby", EncodeColor(tValues.abyssea.ruby, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Ruby:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.ruby));
@@ -1213,14 +1082,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Amber]") then
         if (tValues.abyssea.amber >= 255) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Amber:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.amber));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.amber));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Amber", EncodeColor(tValues.abyssea.amber, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Amber", EncodeColor(tValues.abyssea.amber, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Amber:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.amber));
@@ -1229,14 +1098,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Gold]") then
         if (tValues.abyssea.golden >= 200) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Gold:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.golden));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.golden));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Gold", EncodeColor(tValues.abyssea.golden, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Gold", EncodeColor(tValues.abyssea.golden, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Gold:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.golden));
@@ -1245,14 +1114,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Silver]") then
         if (tValues.abyssea.silvery >= 200) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Silver:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.silvery));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.silvery));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Silver", EncodeColor(tValues.abyssea.silvery, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Silver", EncodeColor(tValues.abyssea.silvery, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Silver:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.silvery));
@@ -1261,14 +1130,14 @@ function ParseToken(i, token)
         end;
     elseif (token =="[Ebon]") then
         if (tValues.abyssea.ebon >= 200) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Ebon:");
                 imgui.SameLine();
-                imgui.TextColored(DefaultColors.FFXICappedValue, tostring(tValues.abyssea.ebon));
+                imgui.TextColored(points.settings.colors.cappedValue, tostring(tValues.abyssea.ebon));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ebon", EncodeColor(tValues.abyssea.ebon, DefaultColors.FFXICappedValue)));
+            compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ebon", EncodeColor(tValues.abyssea.ebon, points.settings.colors.cappedValue)));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Ebon:");
                 imgui.SameLine();
                 imgui.Text(tostring(tValues.abyssea.ebon));
@@ -1276,7 +1145,7 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(string.format(TemplatePlain, "Ebon", tValues.abyssea.ebon));
         end;
     elseif (token == "[AssaultObjective]") then
-        if (not points.settings.use_compact or points.use_both) then
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.Text(tValues.assault.objective);
         end
         compactBar.textObjs[i]:SetText(tValues.assault.objective);
@@ -1284,17 +1153,17 @@ function ParseToken(i, token)
     elseif (token == "[EventTimer]") then
         local extractedTime = GetHMS(tValues.eventTimer);
         if (tValues.eventTimer <= 60) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.TextColored(DefaultColors.FFXICrimson, string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
             end
             compactBar.textObjs[i]:SetText(EncodeColor(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec), DefaultColors.FFXICrimson));
         elseif (tValues.eventTimer <= 300) then
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.TextColored(DefaultColors.FFXIAmber, string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
             end
             compactBar.textObjs[i]:SetText(EncodeColor(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec), DefaultColors.FFXIYellow));
         else
-            if (not points.settings.use_compact or points.use_both) then
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
             end
             compactBar.textObjs[i]:SetText(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
@@ -1302,13 +1171,13 @@ function ParseToken(i, token)
     elseif (token == "[Gil]") then
         local gil = AshitaCore:GetMemoryManager():GetInventory():GetContainerItem(0, 0);
         if (gil) then
-            if (not points.settings.use_compact or points.use_both) then
-                imgui.Text(string.format("%s G", SeparateNumbers(gil.Count)));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("%s G", SeparateNumbers(gil.Count, sep)));
             end
-            compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count)));   
+            compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count, sep)));   
         end
     elseif (token =="[DIV]") then
-        if (not points.settings.use_compact or points.use_both) then
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.TextColored(DefaultColors.FFXIDarkGrey, points.settings.bar_divider);
         end
         compactBar.textObjs[i]:SetText(EncodeColor(points.settings.compact_divider, DefaultColors.FFXIDarkGrey));
@@ -1321,7 +1190,7 @@ function InitPointsBar()
     local playerEntity = GetPlayerEntity();
     lastZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);            
     InitTrackedValues();
-    UpdateFromZone(lastZone, true);    
+    UpdateTokenList(lastZone, true);
     lastJob = player:GetMainJob();
     globalTimer = math.floor(os.clock());
     
@@ -1332,17 +1201,10 @@ function InitPointsBar()
     points.loaded = true;
 end
 
-function DrawConfigWindow()
-    imgui.SetNextWindowSize({ 350, 250 }, ImGuiCond_FirstUseEver);
-    imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 10, 10 });
-    local strTokenDefault = { '' };
-    local strTokenMasterd = "";
-    local strTokenDynamis = "";
-    if(points.config_is_open and imgui.Begin("Points Configuration", points.config_is_open, bit.bor(ImGuiWindowFlags_NoSavedSettings))) then
-        imgui.Text("Token Displays:");
-        imgui.Text("Debug: ");
-        imgui.Text(debugText);
-        imgui.End();
-    end
-    imgui.PopStyleVar(1);
-end;
+function ReloadImages(theme)
+    guiimages = {};
+    guiimages = images.loadTextures(theme);
+    compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, theme));
+    compactBar.jobicon.background.width = 64;
+    compactBar.jobicon.background.height = 16;
+end
