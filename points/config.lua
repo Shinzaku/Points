@@ -11,6 +11,7 @@ config.uiSettings = {
     dragging = false,
     dd_source = 0,
     dd_target = 0,
+    changed = false,
 }
 
 config.drawWindow = function(settings)
@@ -19,12 +20,15 @@ config.drawWindow = function(settings)
     imgui.PushStyleColor(ImGuiCol_Text, { 1.0, 1.0, 1.0, 1.0 });
     if(config.uiSettings.is_open[1] and imgui.Begin(("Points v%s"):fmt(addon.version), config.uiSettings.is_open, bit.bor(ImGuiWindowFlags_NoSavedSettings))) then
         imgui.BeginChild("conf_main", { 0, 90 }, true);
-            imgui.Checkbox("Use Compact Bar", settings.use_compact_ui);
+            if (imgui.Checkbox("Use Compact Bar", settings.use_compact_ui)) then
+                config.uiSettings.changed = true;
+            end
             if (imgui.Button("Reload", { 130, 20 })) then
                 AshitaCore:GetChatManager():QueueCommand(-1, "/addon reload points");
             end
             if(imgui.Button("Restore Defaults", { 130, 20 })) then
                 CopyTable(DefaultSettings, settings);
+                config.uiSettings.changed = true;
             end
             imgui.ShowHelp("Reset all settings to addon defaults", true);
         imgui.EndChild();
@@ -57,7 +61,7 @@ config.renderTokenTab = function(settings)
                 imgui.PopStyleColor(1);
                 imgui.NewLine();
 
-                config.renderTokens(settings, "token_order_default", settings.token_enabled_mastered);
+                config.renderTokens(settings, "token_order_default", settings.token_enabled_mastered);                
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Mastered")) then
@@ -98,6 +102,7 @@ config.renderTokens = function(settings, listName, flag)
     if (not listName:find("default")) then
         if (imgui.Checkbox(' Enabled', flag)) then
             UpdateTokenList(zone, false, job);
+            config.uiSettings.changed = true;
         end
         imgui.NewLine();
     end
@@ -109,6 +114,7 @@ config.renderTokens = function(settings, listName, flag)
     if (imgui.InputTextMultiline("", defTokens, 512, { 420, 40 }, ImGuiInputTextFlags_EnterReturnsTrue)) then
         settings[listName] = table.concat(defTokens);
         UpdateTokenList(zone, false, job);
+        config.uiSettings.changed = true;
     end
 
     if (syntaxErr) then
@@ -162,23 +168,35 @@ config.renderStylesTab = function(settings)
         if (imgui.BeginTabItem('Global', nil)) then
             imgui.Text("Font");
             imgui.BeginChild("conf_font", { 0, 115 }, true);
-                imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.mainText);
-                imgui.ColorEdit4('\xef\x94\xbf Capped Value', settings.colors.cappedValue);
-                imgui.ColorEdit4('\xef\x94\xbf Chain Timer', settings.colors.chainTimer);
+                if (imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.mainText)) then
+                    config.uiSettings.changed = true;
+                end
+                if (imgui.ColorEdit4('\xef\x94\xbf Capped Value', settings.colors.cappedValue)) then
+                    config.uiSettings.changed = true;
+                end
+                if (imgui.ColorEdit4('\xef\x94\xbf Chain Timer', settings.colors.chainTimer)) then
+                    config.uiSettings.changed = true;
+                end
                 if (imgui.Button("Reset", { 60, 20 })) then
                     settings.colors.mainText = { 1.0, 1.0, 1.0, 1.0 };
                     CopyTable(DefaultColors.FFXICappedValue, settings.colors.cappedValue);
                     CopyTable(DefaultColors.FFXIYellow, settings.colors.chainTimer);
+                    config.uiSettings.changed = true;
                 end
             imgui.EndChild();
 
             imgui.Text("Background");
             imgui.BeginChild("conf_bg", { 0, 95 }, true);
-                imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.bg);
-                imgui.ColorEdit4('\xef\x94\xbf Border Color', settings.colors.bgBorder);
+                if (imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.bg)) then
+                    config.uiSettings.changed = true;
+                end
+                if (imgui.ColorEdit4('\xef\x94\xbf Border Color', settings.colors.bgBorder)) then
+                    config.uiSettings.changed = true;
+                end
                 if (imgui.Button("Reset", { 60, 20 })) then
                     CopyTable(DefaultColors.FFXIGreyBg, settings.colors.bg);
                     CopyTable(DefaultColors.FFXIGreyBorder, settings.colors.bgBorder);
+                    config.uiSettings.changed = true;
                 end
             imgui.EndChild();
             
@@ -193,6 +211,7 @@ config.renderStylesTab = function(settings)
                             config.uiSettings.theme_index[1] = i;
                             settings.theme = themePaths[i];
                             ReloadImages(settings.theme);
+                            config.uiSettings.changed = true;
                         end
                         if (selected) then
                             imgui.SetItemDefaultFocus();
@@ -209,12 +228,14 @@ config.renderStylesTab = function(settings)
                 local sep = { settings.num_separator, };
                 if (imgui.InputText("Radix Character", sep, 2)) then
                     settings.num_separator = sep[1];
+                    config.uiSettings.changed = true;
                 end            
                 imgui.ShowHelp("Decimal separator for every thousandth place (1000 vs 1,000)", true);
 
                 local rate = { settings.rate_reset_timer, };
                 if (imgui.InputInt("Chain Rate Reset", rate)) then
                     settings.rate_reset_timer = rate[1];
+                    config.uiSettings.changed = true;
                 end
                 imgui.ShowHelp("Number of seconds until the chain rate calculation resets", true);
             imgui.EndChild();
@@ -229,9 +250,11 @@ config.renderStylesTab = function(settings)
                 local winRect = AshitaCore:GetProperties():GetFinalFantasyRect();
                 if (imgui.SliderInt("\xef\x8c\xb7X", cx, 0, winRect.right, "%dpx")) then
                     settings.compact.x = cx[1];
+                    config.uiSettings.changed = true;
                 end
                 if (imgui.SliderInt("\xef\x8c\xb8Y", cy, 0, winRect.bottom, "%dpx")) then
                     settings.compact.y = cy[1];
+                    config.uiSettings.changed = true;
                 end
             imgui.EndChild();
 
@@ -240,14 +263,17 @@ config.renderStylesTab = function(settings)
                 local height = { settings.compact.font.font_height, };
                 if (imgui.SliderInt("\xef\x95\x88 Height", height, 1, 99, "%dpx")) then
                     settings.compact.font.font_height = height[1];
+                    config.uiSettings.changed = true;
                 end
                 local ffamily = { settings.compact.font.font_family, };
                 if (imgui.InputText("\xef\x80\xb1 Font Family", ffamily, 255)) then
                     settings.compact.font.font_family = table.concat(ffamily);
+                    config.uiSettings.changed = true;
                 end
                 if (imgui.Button("Reset", { 60, 20 })) then
                     settings.compact.font.font_height = DefaultSettings.compact.font.font_height;
                     settings.compact.font.font_family = DefaultSettings.compact.font.font_family;
+                    config.uiSettings.changed = true;
                 end
             imgui.EndChild();
             imgui.EndTabItem();

@@ -1,5 +1,4 @@
 HelpString = "\30\67- \30\71config\30\67 - Brings up the configuration window\n" ..
-             "\30\67- \30\71compact\30\67 - Enables/disables the compact bar\n" ..
              "\30\67Check the configuration window for all available options\n" ..
              "\30\67If issues found, please submit an issue at:\n\30\92https://github.com/Shinzaku/Ashita4-Addons/points/";
 

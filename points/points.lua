@@ -133,16 +133,6 @@ ashita.events.register("command", "command_callback1", function (e)
         e.blocked = true;
         if (args[2] == "config") then
             config.uiSettings.is_open[1] = not config.uiSettings.is_open[1];
-        elseif (args[2] == "compact") then
-            points.settings.use_compact_ui[1] = not points.settings.use_compact_ui[1];
-            if (not points.use_both) then
-                SetCompactVisibility(points.settings.use_compact_ui[1]);
-            end;
-            if (points.settings.use_compact_ui[1]) then
-                PrintMsg("Displaying compact bar");
-            else
-                PrintMsg("Reverting to default bar");
-            end
         elseif (args[2] == "bothbars") then
             points.use_both = not points.use_both;
             if (points.use_both) then                
@@ -407,7 +397,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
         if (compactBar.wrapper:GetVisible()) then
             SetCompactVisibility(false);
         end
-        return;    
+        return;
     elseif (not player.isZoning and zoning) then
         zoning = false;
         UpdateTokenList(currZone, true);
@@ -472,6 +462,10 @@ ashita.events.register("d3d_present", "present_cb", function ()
     -- Config window --
     -------------------
     config.drawWindow(points.settings);
+    if (config.uiSettings.changed) then
+        UpdateSettings();
+        config.uiSettings.changed = false;
+    end
 end);
 
 function DrawPointsBar(currJob)
@@ -1188,7 +1182,7 @@ end
 
 function InitPointsBar()
     local playerEntity = GetPlayerEntity();
-    lastZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);            
+    lastZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
     InitTrackedValues();
     UpdateTokenList(lastZone, true);
     lastJob = player:GetMainJob();
