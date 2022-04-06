@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.1";
+addon.version   = "2.0.2";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -401,9 +401,9 @@ ashita.events.register("d3d_present", "present_cb", function ()
     elseif (not player.isZoning and zoning) then
         zoning = false;
         UpdateTokenList(currZone, true);
-    elseif ((points.settings.use_compact_ui[1] and not compactBar.wrapper:GetVisible()) or points.use_both) then
+    elseif ((points.settings.use_compact_ui[1] and (not compactBar.wrapper:GetVisible() or not compactBar.textObjs[1]:GetVisible())) or points.use_both) then
         SetCompactVisibility(true);
-    elseif (not points.settings.use_compact_ui[1] and compactBar.wrapper:GetVisible() and not points.use_both) then
+    elseif (not points.settings.use_compact_ui[1] and (compactBar.wrapper:GetVisible() or compactBar.textObjs[1]:GetVisible()) and not points.use_both) then
         SetCompactVisibility(false);
     elseif (currZone ~= nil and currZone ~= 0 and currZone ~= lastZone) then
         lastZone = currZone;
@@ -542,7 +542,7 @@ function LoadCompactBar()
     bSizes.bottom = 1.0;
     compactBar.wrapper.background.border_sizes = bSizes;
     compactBar.wrapper.background.border_visible = true;
-    compactBar.wrapper.lockedz = true;  
+    compactBar.wrapper.lockedz = true;
     compactBar.wrapper.position_x = points.settings.compact.x;
     compactBar.wrapper.position_y = points.settings.compact.y;
     compactBar.wrapper.visible = points.settings.use_compact_ui[1];
@@ -563,8 +563,8 @@ function LoadCompactBar()
     for i=1,#currTokens,1 do
         compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
         compactBar.textObjs[i].can_focus = false;
-        compactBar.textObjs[i].parent = compactBar.wrapper;
         compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
+        compactBar.textObjs[i].parent = compactBar.wrapper;
     end
 end
 
