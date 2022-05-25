@@ -99,5 +99,5 @@ MessageMatch.AbysseaRestLights1 = "Pearlescent: (\\d+) / Ebon: (\\d+).*Golden: (
 MessageMatch.AbysseaRestLights2 = "Azure: (\\d+) / Ruby: (\\d+) / Amber: (\\d+)";
 MessageMatch.AbysseaLights = "body emits [a|an] (feeble|faint|mild|strong|instance) (pearlescent|golden|silvery|ebon|azure|ruby|amber) light!";
 MessageMatch.AssaultObj = "Commencing (.*)(.*)!.*: (.*)[0|1]";
-MessageMatch.AssaultTime = "You have (\\d+) (minute|minutes|second|seconds) .* to complete this mission";
+MessageMatch.AssaultTime = "You have (\\d+) (minute|minutes|second|seconds).*to complete this mission";
 MessageMatch.AssaultTimeUpdate = "Time remaining: (\\d+) (minute|minutes|second|seconds).*";

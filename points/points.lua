@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.2";
+addon.version   = "2.0.5";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -176,11 +176,11 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 if (tValues.default.capacity.curr > 30000) then
                     tValues.default.capacity.curr = tValues.default.capacity.curr - 30000;
                 end
-            elseif (msgId == 8 or msgId == 105 or msgId == 371 or msgId == 372) then
+            elseif (msgId == 8 or msgId == 105 or msgId == 253 or msgId == 371 or msgId == 372) then
                 if (tValues.default.lastXpKillTime ~= 0) then
                     table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});   
                 else
-                    table.insert(tValues.default.xpKills, { time=1, xp=val});   
+                    table.insert(tValues.default.xpKills, { time=1, xp=val});
                 end
                 tValues.default.xpChain = val2;
                 tValues.default.xpTimer = 60;        
@@ -195,9 +195,9 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 end
             elseif (msgId == 809 or msgId == 810) then
                 if (tValues.default.lastEpKillTime ~= 0) then
-                    table.insert(tValues.default.epKills, { time=(killTime - tValues.default.lastEpKillTime), ep=val});   
+                    table.insert(tValues.default.epKills, { time=(killTime - tValues.default.lastEpKillTime), ep=val});
                 else
-                    table.insert(tValues.default.epKills, { time=1, ep=val});   
+                    table.insert(tValues.default.epKills, { time=1, ep=val});
                 end
                 tValues.default.epChain = val2;
                 tValues.default.epTimer = 30;        
