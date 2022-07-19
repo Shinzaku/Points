@@ -66,8 +66,8 @@ tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0
                     };
 tValues.dynamis = { keyItems = { false, false, false, false, false } };
 tValues.abyssea = { pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0, silvery = 0, ebon = 0, };
-tValues.assault = { objective = "", timer = 0, };
-tValues.nyzul = { floor = 0, objective = "", };
+tValues.assault = { objective = "-", timer = 0, };
+tValues.nyzul = { floor = 0, objective = "-", };
 tValues.voidwatch = { red = 0, blue = 0, green = 0, yellow = 0, white = 0, };
 
 local compactBar = {};
@@ -267,7 +267,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
     end
 end);
 
-ashita.events.register('text_in', 'text_in_callback1', function (e)    
+ashita.events.register('text_in', 'text_in_callback1', function (e)
     if (e.mode > 600 and not e.injected) then
         local results;
         
@@ -344,12 +344,22 @@ ashita.events.register('text_in', 'text_in_callback1', function (e)
                 UpdateAbysseaLights(results[1][2], results[1][3]);
                 return;
             end
-        elseif (AssaultMapping[lastZone] ~= nil) then
+        elseif (AssaultMapping[lastZone] ~= nil or NyzulMapping[lastZone] ~= nil) then
             results = ashita.regex.search(e.message, MessageMatch.AssaultObj);
             if (results ~= nil) then
                 tValues.assault.objective = results[1][2] .. " -> " .. string.sub(results[1][4], 1, string.len(results[1][4] - 1));
                 return;
             end
+            results = ashita.regex.search(e.message, MessageMatch.NyzulObj);
+            if (results ~= nil) then
+                tValues.nyzul.objective = results[1][2];
+                return;
+            end
+            results = ashita.regex.search(e.message, MessageMatch.NyzulFloor);
+            if (results ~= nil) then
+                tValues.nyzul.floor = results[1][2];
+                return;
+            end;
             results = ashita.regex.search(e.message, MessageMatch.AssaultTime);
             if (results ~= nil) then
                 local timeLeft = tonumber(results[1][2]);
@@ -749,9 +759,13 @@ function UpdateTokenList(zoneId, reset, jobId)
         currTokens = ashita.regex.split(points.settings.token_order_abyssea, " ");
         tokenType = "abyssea";
         if (reset) then
-            for i,v in pairs(tValues.abyssea) do
-                v = 0;
-            end
+            tValues.abyssea.amber = 0;
+            tValues.abyssea.azure = 0;
+            tValues.abyssea.ebon = 0;
+            tValues.abyssea.golden = 0;
+            tValues.abyssea.pearlescent = 0;
+            tValues.abyssea.ruby = 0;
+            tValues.abyssea.silvery = 0;
             tValues.eventTimer = 300;
         end
     elseif (AssaultMapping[zoneId] ~= nil and points.settings.token_enabled_assault) then
@@ -1143,7 +1157,16 @@ function ParseToken(i, token)
             imgui.Text(tValues.assault.objective);
         end
         compactBar.textObjs[i]:SetText(tValues.assault.objective);
+    elseif (token == "[NyzulObjective]") then
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(tValues.nyzul.objective);
+        end
+        compactBar.textObjs[i]:SetText(tValues.nyzul.objective);
     elseif (token =="[NyzulFloor]") then
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text("Floor: " .. tostring(tValues.nyzul.floor));
+        end
+        compactBar.textObjs[i]:SetText("Floor: " .. tostring(tValues.nyzul.floor));
     elseif (token == "[EventTimer]") then
         local extractedTime = GetHMS(tValues.eventTimer);
         if (tValues.eventTimer <= 60) then

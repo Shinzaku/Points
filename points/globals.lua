@@ -101,3 +101,5 @@ MessageMatch.AbysseaLights = "body emits [a|an] (feeble|faint|mild|strong|instan
 MessageMatch.AssaultObj = "Commencing (.*)(.*)!.*: (.*)[0|1]";
 MessageMatch.AssaultTime = "You have (\\d+) (minute|minutes|second|seconds).*to complete this mission";
 MessageMatch.AssaultTimeUpdate = "Time remaining: (\\d+) (minute|minutes|second|seconds).*";
+MessageMatch.NyzulObj = "Objective: (.*)[0|1]";
+MessageMatch.NyzulFloor = "Transfer complete. Welcome to Floor (\\d+).*";
