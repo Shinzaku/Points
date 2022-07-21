@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.6";
+addon.version   = "2.0.7";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -772,11 +772,16 @@ function UpdateTokenList(zoneId, reset, jobId)
         currTokens = ashita.regex.split(points.settings.token_order_assault, " ");
         tokenType = "assault";
         if (reset) then
+            tValues.assault.objective = "-";
             tValues.eventTimer = 1800;
         end
     elseif (NyzulMapping[zoneId] ~= nil and points.settings.token_enabled_nyzul) then
         currTokens = ashita.regex.split(points.settings.token_order_nyzul, " ");
         tokenType = "nyzul";
+        if (reset) then
+            tValues.nyzul.objective = "-";
+            tValues.nyzul.floor = 0;
+        end
     else
         local currJob = player:GetMainJob();
         local mastered = player:GetJobPointsSpent(currJob) == 2100;
@@ -889,9 +894,9 @@ function ParseToken(i, token)
     elseif (token =="[XPHour]") then
         if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour), sep)));
+                imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estMpHour), sep)));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estXpHour), "LP"));
+            compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estMpHour), "LP"));
         else
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format("(%s XP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour), sep)));
