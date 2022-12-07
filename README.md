@@ -1,5 +1,5 @@
 # Points
-**Only for Ashita v4**
+**Only for Ashita v4; Made to support Retail!**
 
 Enter "/points help" after loading the addon to view available commands
 Various resource point and event tracker; Includes the following
