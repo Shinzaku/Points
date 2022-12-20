@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.7";
+addon.version   = "2.0.8";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -69,6 +69,9 @@ tValues.abyssea = { pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0,
 tValues.assault = { objective = "-", timer = 0, };
 tValues.nyzul = { floor = 0, objective = "-", };
 tValues.voidwatch = { red = 0, blue = 0, green = 0, yellow = 0, white = 0, };
+tValues.omen = { mainObjective = "-", addObjectives = {}, };
+tValues.odyssey = { segments = 0, totalSegments = 0, izzat = 0, mMastery = 0, izCosts = {} };
+tValues.sortie = { gallimaufry = 0 };
 
 local compactBar = {};
 compactBar.wrapper = fonts.new(WrapperSettings);
@@ -604,7 +607,7 @@ function UpdateCompactBar(currJob)
     local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
     compactBar.jobicon.background.texture_offset_x = imgOffsetX;
     compactBar.jobicon.background.texture_offset_y = imgOffsetY;
-    local jobLevel = player:GetMainJobLevel();    
+    local jobLevel = player:GetMainJobLevel();
     local mastered = player:GetJobPointsSpent(currJob) == 2100;
     if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
@@ -647,8 +650,6 @@ function UpdateCompactBar(currJob)
         compactBar.wrapper.background.height = 16;
     end;
 
-    --points.settings.compact.x = compactBar.wrapper.position_x;
-    --points.settings.compact.y = compactBar.wrapper.position_y;
     compactBar.wrapper.position_x = points.settings.compact.x;
     compactBar.wrapper.position_y = points.settings.compact.y;
 end

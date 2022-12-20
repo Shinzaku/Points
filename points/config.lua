@@ -108,10 +108,10 @@ config.renderTokens = function(settings, listName, flag)
     end
 
     if (syntaxErr) then
-        imgui.PushStyleColor(ImGuiCol_Border, { 1.0, 0.0, 0.0, 0.5 }); 
+        imgui.PushStyleColor(ImGuiCol_Border, { 1.0, 0.0, 0.0, 0.5 });
     end
     
-    if (imgui.InputTextMultiline("", defTokens, 512, { 420, 40 }, ImGuiInputTextFlags_EnterReturnsTrue)) then
+    if (imgui.InputTextMultiline("", defTokens, 512, { 420, 40 })) then
         settings[listName] = table.concat(defTokens);
         UpdateTokenList(zone, false, job);
         config.uiSettings.changed = true;
