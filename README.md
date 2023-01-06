@@ -18,8 +18,8 @@ Various resource point and event tracker; Includes the following
 Enter "/points config" to view configuration editor
 
 Available tokens:
-- [XP] [Merits] [XPHour] [XPChain] [CP] [JP] [JPHour] [CPChain] [Sparks] [Accolades] [EP] [EPHour] [EPChain]
+- [XP] [Merits] [XPHour] [XPChain] [CP] [JP] [JPHour] [CPChain] [Sparks] [Accolades] [EP] [EPHour] [EPChain] 
 - [DynamisKI] [Pearl] [Azure] [Ruby] [Amber] [Gold] [Silver] [Ebon] [AssaultObjective]
 - [DIV] (vertical divider) [EventTimer]
-- [Gil]
+- [Gil] [Inv]
 
