@@ -911,7 +911,7 @@ function ParseToken(i, token)
         end
         if (tValues.default.xpTimer > 0) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then                
-                imgui.Text(label .. "\xef\x83\x81 >");
+                imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
                 imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
             end
