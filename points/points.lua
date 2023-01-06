@@ -1205,7 +1205,7 @@ function ParseToken(i, token)
         local cnt = 0;
         if (max > 0) then
             for i = 0, max, 1 do
-                local inv_entry = AshitaCore:GetMemoryManager():GetInventory():GetContainerItem(0, i);
+                local inv_entry = inv:GetContainerItem(0, i);
                 if (inv_entry ~= nil and inv_entry.Id ~= 0 and inv_entry.Id ~= 65535) then
                     cnt = cnt + 1
                 end
