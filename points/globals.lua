@@ -52,6 +52,7 @@ DefaultSettings = T{
     theme = "default",
     rate_reset_timer = 600,
     colors = { mainText = { 1.0, 1.0, 1.0, 1.0 }, cappedValue = DefaultColors.FFXICappedValue, chainTimer = DefaultColors.FFXIYellow, bg = DefaultColors.FFXIGreyBg, bgBorder = DefaultColors.FFXIGreyBorder },
+    use_job_icon = { true, },
 }
 WrapperSettings = T{
     visible = true,

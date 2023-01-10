@@ -49,7 +49,7 @@ config.drawWindow = function(settings)
     imgui.PopStyleVar(1);
 end
 
-config.renderTokenTab = function(settings)    
+config.renderTokenTab = function(settings)
     imgui.Text("Token Settings");
 
     imgui.BeginChild("conf_token_list_left", { 0, 0 }, true);
@@ -61,7 +61,7 @@ config.renderTokenTab = function(settings)
                 imgui.PopStyleColor(1);
                 imgui.NewLine();
 
-                config.renderTokens(settings, "token_order_default", settings.token_enabled_mastered);                
+                config.renderTokens(settings, "token_order_default", settings.token_enabled_mastered);
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Mastered")) then
@@ -122,44 +122,6 @@ config.renderTokens = function(settings, listName, flag)
         imgui.ShowHelp("Missing opening or closing brackets for token", true);
     end
 end
-
--- config.renderTokens = function(tokenList)    
---     imgui.PushStyleColor(ImGuiCol_Button, { 0.25, 0.25, 0.25, 1.0 });
---     local window_visible_x2 = imgui.GetWindowPos() + imgui.GetWindowContentRegionMax();
---     local last_button_x2 = 0;
-
---     if (config.uiSettings.dd_source ~= 0 and config.uiSettings.dd_source ~= 0) then
---         local source = config.uiSettings.dd_source;
---         local target = config.uiSettings.dd_target;
---         tokenList[source], tokenList[target] = tokenList[target], tokenList[source];
---     end
-
---     for i=1,#tokenList do
---         local v = tokenList[i];
---         if (v) then            
---             local button_szx = imgui.CalcTextSize(v) + 4;
---             local next_button_x2 = last_button_x2 + 4 + button_szx;
---             if next_button_x2 < window_visible_x2 then imgui.SameLine(0,1) end
---             imgui.SmallButton(v);
---             if (imgui.IsItemActive() and imgui.IsItemFocused() and not imgui.IsItemHovered()) then
---                 config.uiSettings.dd_source = i;
---                 imgui.BeginTooltip();
---                     imgui.Text(v);
---                 imgui.EndTooltip();
---             elseif (not imgui.IsItemActive() and imgui.IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) and config.uiSettings.dd_source ~= 0) then
---                 if (i ~= config.uiSettings.dd_source) then
---                     config.uiSettings.dd_target = i;
---                 end
---             elseif (i == config.uiSettings.dd_source and not imgui.IsItemActive()) then
---                 config.uiSettings.dd_source = 0;
---                 config.uiSettings.dd_target = 0;
---             end
-            
---             last_button_x2 = imgui.GetItemRectMax();
---         end
---     end    
---     imgui.PopStyleColor(1);
--- end
 
 config.renderStylesTab = function(settings)
     imgui.Text("Style Settings");
@@ -224,12 +186,17 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
 
             imgui.Text("Misc");
-            imgui.BeginChild("conf_misc", { 0, 70 }, true);
+            imgui.BeginChild("conf_misc", { 0, 100 }, true);
                 local sep = { settings.num_separator, };
+                if (imgui.Checkbox("Use Job Icon", settings.use_job_icon)) then
+                    config.uiSettings.changed = true;
+                end
+                imgui.ShowHelp("Display the job icon on the far left of the bar with current job level", true);
+
                 if (imgui.InputText("Radix Character", sep, 2)) then
                     settings.num_separator = sep[1];
                     config.uiSettings.changed = true;
-                end            
+                end
                 imgui.ShowHelp("Decimal separator for every thousandth place (1000 vs 1,000)", true);
 
                 local rate = { settings.rate_reset_timer, };
@@ -242,8 +209,23 @@ config.renderStylesTab = function(settings)
 
             imgui.EndTabItem();
         end
+        if (imgui.BeginTabItem('Full', nil)) then
+            imgui.Text("Font");
+            imgui.BeginChild("conf_font_full", { 0, 95 }, true);
+                local scale = { settings.font_scale, };
+                if (imgui.SliderFloat("\xef\x95\x88 Scale", scale, 1, 10, "%.1f")) then
+                    settings.font_scale = scale[1];
+                    config.uiSettings.changed = true;
+                end
+                if (imgui.Button("Reset", { 60, 20 })) then
+                    settings.font_scale = 1.0;
+                    config.uiSettings.changed = true;
+                end
+            imgui.EndChild();
+            imgui.EndTabItem();
+        end
         if (imgui.BeginTabItem('Compact', nil)) then
-            imgui.Text("Position")
+            imgui.Text("Position");
             imgui.BeginChild("conf_pos_compact", { 0, 75 }, true);
                 local cx = { settings.compact.x, };
                 local cy = { settings.compact.y, };

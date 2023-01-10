@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.8";
+addon.version   = "2.0.9";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -168,9 +168,9 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
         if (pId == GetPlayerEntity().ServerId) then
             if (msgId == 718 or msgId == 735) then
                 if (tValues.default.lastCpKillTime ~= 0) then
-                    table.insert(tValues.default.cpKills, { time=(killTime - tValues.default.lastCpKillTime), cp=val});   
+                    table.insert(tValues.default.cpKills, { time=(killTime - tValues.default.lastCpKillTime), cp=val});
                 else
-                    table.insert(tValues.default.cpKills, { time=1, cp=val});   
+                    table.insert(tValues.default.cpKills, { time=1, cp=val});
                 end
                 tValues.default.cpChain = val2;
                 tValues.default.cpTimer = 30;
@@ -181,12 +181,12 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 end
             elseif (msgId == 8 or msgId == 105 or msgId == 253 or msgId == 371 or msgId == 372) then
                 if (tValues.default.lastXpKillTime ~= 0) then
-                    table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});   
+                    table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});
                 else
                     table.insert(tValues.default.xpKills, { time=1, xp=val});
                 end
                 tValues.default.xpChain = val2;
-                tValues.default.xpTimer = 60;        
+                tValues.default.xpTimer = 60;     
                 tValues.default.lastXpKillTime = killTime;
                 tValues.default.exp.curr = tValues.default.exp.curr + val;
                 tValues.default.limit.curr = tValues.default.limit.curr + val;
@@ -203,7 +203,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                     table.insert(tValues.default.epKills, { time=1, ep=val});
                 end
                 tValues.default.epChain = val2;
-                tValues.default.epTimer = 30;        
+                tValues.default.epTimer = 30;     
                 tValues.default.lastEpKillTime = killTime;
                 tValues.default.mastery.curr = tValues.default.mastery.curr + val;
             elseif (msgId == 719) then
@@ -217,7 +217,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
         tValues.default.exp.max = struct.unpack("H", e.data_modified, 0x13);
         tValues.default.mastery.curr = struct.unpack("I", e.data_modified, 0x69);
         tValues.default.mastery.max = struct.unpack("I", e.data_modified, 0x6D);
-		tValues.default.accolades = math.floor(e.data_modified:byte(0x5A) / 4) + e.data_modified:byte(0x5B) * 2 ^ 6 + e.data_modified:byte(0x5C) * 2 ^ 14;        
+		tValues.default.accolades = math.floor(e.data_modified:byte(0x5A) / 4) + e.data_modified:byte(0x5B) * 2 ^ 6 + e.data_modified:byte(0x5C) * 2 ^ 14;     
     elseif (e.id == 0x063) then
         local offset = player:GetMainJob() * 6 + 13;
         if (e.data_modified:byte(5) == 2) then
@@ -482,59 +482,64 @@ ashita.events.register("d3d_present", "present_cb", function ()
 end);
 
 function DrawPointsBar(currJob)
-    local jobLevel = player:GetMainJobLevel();    
+    local jobLevel = player:GetMainJobLevel(); 
     local mastered = player:GetJobPointsSpent(currJob) == 2100;
     if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
     end
     if (not points.settings.use_compact_ui[1] or points.use_both) then
-        imgui.SetNextWindowSize({ -1, 32 }, ImGuiCond_Always);
-        imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_FirstUseEver);    
+        imgui.SetNextWindowSize({ -1, 32 * points.settings.font_scale }, ImGuiCond_Always);
+        imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_FirstUseEver); 
     end    
     imgui.PushStyleColor(ImGuiCol_WindowBg, points.settings.colors.bg);
     imgui.PushStyleColor(ImGuiCol_Border, points.settings.colors.bgBorder);
     imgui.PushStyleColor(ImGuiCol_BorderShadow, { 1.0, 0.0, 0.0, 1.0});
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-    if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration))) then        
+    if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration))) then
         imgui.PopStyleColor(3);
         imgui.PushStyleColor(ImGuiCol_Text, points.settings.colors.mainText);
+        imgui.SetWindowFontScale(points.settings.font_scale);
         -----------------------------------------
         -- Left image icon, with job and level --
         -----------------------------------------
-        local imgOffsetX = (1.0 / (384 / 64)) * math.fmod(currJob - 1.0, 6.0);
-        local imgOffsetY = 0.25 * math.floor((currJob - 1) / 6.0);
-        local imgOffsetX2 = imgOffsetX + (1.0 / (384 / 64.0));
-        local imgOffsetY2 = imgOffsetY + 0.25;
-        imgui.Image(tonumber(ffi.cast("uint32_t", guiimages.jobicons)), { 64, 32 }, { imgOffsetX, imgOffsetY }, { imgOffsetX2, imgOffsetY2 }, { 1, 1, 1, 1 }, { 1, 1, 1, 0 });
-        imgui.SetCursorPos({ 43, 0 });
-        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 5 });
-        imgui.AlignTextToFramePadding();
-        imgui.Text(string.format("%02d", jobLevel));
-        imgui.PopStyleVar(1);
-        imgui.SameLine();
-        imgui.SetCursorPos({ 72, 0 });
-        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 10 });
-        imgui.AlignTextToFramePadding();
+        if (points.settings.use_job_icon[1] == true) then
+            local imgOffsetX = (1.0 / (384 / 64)) * math.fmod(currJob - 1.0, 6.0);
+            local imgOffsetY = 0.25 * math.floor((currJob - 1) / 6.0);
+            local imgOffsetX2 = imgOffsetX + (1.0 / (384 / 64.0));
+            local imgOffsetY2 = imgOffsetY + 0.25;
+            imgui.Image(tonumber(ffi.cast("uint32_t", guiimages.jobicons)), { 64 * points.settings.font_scale, 32 * points.settings.font_scale }, { imgOffsetX, imgOffsetY }, { imgOffsetX2, imgOffsetY2 }, { 1, 1, 1, 1 }, { 1, 1, 1, 0 });
+            imgui.SetCursorPos({ 43 * points.settings.font_scale, 0 });
+            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 5 });
+            imgui.AlignTextToFramePadding();
+            imgui.Text(string.format("%02d", jobLevel));
+            imgui.PopStyleVar(1);
+            imgui.SameLine();
+            imgui.SetCursorPos({ 72 * points.settings.font_scale, 0 });
+            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 10 * points.settings.font_scale });
+            imgui.AlignTextToFramePadding();
+            imgui.PopStyleVar(1);
+        else
+            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 10 * points.settings.font_scale });
+            imgui.AlignTextToFramePadding();
+            imgui.PopStyleVar(1);
+            imgui.SetCursorPos({ 10 * points.settings.font_scale, 0 });
+        end
 
         --------------------
         --- Main text bar --
         --------------------        
-        imgui.SetWindowFontScale(points.settings.font_scale);
         for i,v in pairs(currTokens) do
             if (i > 1) then
                 imgui.SameLine();
             end
     
             ParseToken(i, v);
-            
-            if (i == 1) then
-                imgui.PopStyleVar(1);
-            end
         end
     
         imgui.SameLine();
         imgui.Text(" ");
         imgui.PopStyleColor(1);
+        imgui.SetWindowFontScale(1.0);
         imgui.End();
     else
         imgui.PopStyleColor(3);
@@ -569,7 +574,7 @@ function LoadCompactBar()
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));
     compactBar.jobicon.background.width = 64;
     compactBar.jobicon.background.height = 16;
-    compactBar.jobicon.visible = points.settings.use_compact_ui[1];
+    compactBar.jobicon.visible = points.settings.use_job_icon[1];
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
@@ -582,8 +587,14 @@ function LoadCompactBar()
 end
 
 function UpdateCompactBar(currJob)
+    compactBar.jobicon.visible = points.settings.use_job_icon[1] and points.settings.use_compact_ui[1];
+
     local totalSize = SIZE.new();
-    totalSize.cx = 64 + points.settings.compact.hPadding;
+    if (points.settings.use_job_icon[1]) then
+        totalSize.cx = 64 + points.settings.compact.hPadding;
+    else
+        totalSize.cx = points.settings.compact.hPadding;
+    end
     totalSize.cy = 16;
 
     if (#compactBar.textObjs > #currTokens) then
@@ -603,16 +614,18 @@ function UpdateCompactBar(currJob)
     ------------------------------------------
     -- Job Icon display
     ------------------------------------------
-    local imgOffsetX = 64 * math.fmod(currJob - 1.0, 6.0);
-    local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
-    compactBar.jobicon.background.texture_offset_x = imgOffsetX;
-    compactBar.jobicon.background.texture_offset_y = imgOffsetY;
-    local jobLevel = player:GetMainJobLevel();
-    local mastered = player:GetJobPointsSpent(currJob) == 2100;
-    if (tValues.default.mBreaker and mastered) then
-        jobLevel = player:GetMasteryJobLevel();
+    if (points.settings.use_job_icon[1]) then
+        local imgOffsetX = 64 * math.fmod(currJob - 1.0, 6.0);
+        local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
+        compactBar.jobicon.background.texture_offset_x = imgOffsetX;
+        compactBar.jobicon.background.texture_offset_y = imgOffsetY;
+        local jobLevel = player:GetMainJobLevel();
+        local mastered = player:GetJobPointsSpent(currJob) == 2100;
+        if (tValues.default.mBreaker and mastered) then
+            jobLevel = player:GetMasteryJobLevel();
+        end
+        compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
     end
-    compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
     -------------------------------------------
     -- These values are already being calculated while default bar is displayed; Ensures the tokens are parsed otherwise --
     if (points.settings.use_compact_ui[1] and not points.use_both) then
@@ -621,7 +634,7 @@ function UpdateCompactBar(currJob)
         end
     end
     -------------------------------------------
-    local lastSize = SIZE.new();    
+    local lastSize = SIZE.new();
     compactBar.wrapper.background.color = RGBAtoHex(points.settings.colors.bg);
     compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     for i,v in pairs(compactBar.textObjs) do
@@ -871,12 +884,12 @@ function ParseToken(i, token)
     if (token =="[XP]") then
         if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep)));    
+                imgui.Text(string.format("LP: %s/%s", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep))); 
             end            
             compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "LP", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep)));
         else
             if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(tValues.default.exp.curr, sep), SeparateNumbers(tValues.default.exp.max, sep)));    
+                imgui.Text(string.format("XP: %s/%s", SeparateNumbers(tValues.default.exp.curr, sep), SeparateNumbers(tValues.default.exp.max, sep))); 
             end            
             compactBar.textObjs[i]:SetText(string.format(TemplateRatio, "XP", SeparateNumbers(tValues.default.exp.curr, sep), SeparateNumbers(tValues.default.exp.max, sep)));
         end
@@ -1197,7 +1210,7 @@ function ParseToken(i, token)
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format("%s G", SeparateNumbers(gil.Count, sep)));
             end
-            compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count, sep)));   
+            compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count, sep)));
         end
     elseif (token == "[Inv]") then
         local inv =  AshitaCore:GetMemoryManager():GetInventory();
@@ -1211,9 +1224,9 @@ function ParseToken(i, token)
                 end
             end
             if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));
+                imgui.Text(string.format("\xef\x8a\x90%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));
             end
-            compactBar.textObjs[i]:SetText(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));   
+            compactBar.textObjs[i]:SetText(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));
         end
     elseif (token =="[DIV]") then
         if (not points.settings.use_compact_ui[1] or points.use_both) then
