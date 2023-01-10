@@ -1199,6 +1199,22 @@ function ParseToken(i, token)
             end
             compactBar.textObjs[i]:SetText(string.format("%s G", SeparateNumbers(gil.Count, sep)));   
         end
+    elseif (token == "[Inv]") then
+        local inv =  AshitaCore:GetMemoryManager():GetInventory();
+        local max = inv:GetContainerCountMax(0);
+        local cnt = 0;
+        if (max > 0) then
+            for i = 0, max, 1 do
+                local inv_entry = inv:GetContainerItem(0, i);
+                if (inv_entry ~= nil and inv_entry.Id ~= 0 and inv_entry.Id ~= 65535) then
+                    cnt = cnt + 1
+                end
+            end
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));
+            end
+            compactBar.textObjs[i]:SetText(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));   
+        end
     elseif (token =="[DIV]") then
         if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.TextColored(DefaultColors.FFXIDarkGrey, points.settings.bar_divider);
