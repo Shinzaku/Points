@@ -188,7 +188,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 end
                 tValues.default.xpChain = val2;
                 for i,v in ipairs(XPChainTimers) do
-                    if (jobLevel <= v.lvl) then
+                    if (jobLevel <= v.lvl and tValues.default.xpTimer == nil) then
                         if (tValues.default.xpChain >= 5) then
                             tValues.default.xpTimer = v.maxtime[6];
                         else
