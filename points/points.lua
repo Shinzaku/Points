@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.10";
+addon.version   = "2.0.11";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -188,11 +188,13 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 end
                 tValues.default.xpChain = val2;
                 for i,v in ipairs(XPChainTimers) do
-                    if (jobLevel <= v.lvl and tValues.default.xpTimer == nil) then
+                    if (jobLevel <= v.lvl) then
                         if (tValues.default.xpChain >= 5) then
                             tValues.default.xpTimer = v.maxtime[6];
+                            break;
                         else
                             tValues.default.xpTimer = v.maxtime[tValues.default.xpChain + 1];
+                            break;
                         end
                     end
                 end
