@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.0.9";
+addon.version   = "2.0.10";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -180,13 +180,25 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                     tValues.default.capacity.curr = tValues.default.capacity.curr - 30000;
                 end
             elseif (msgId == 8 or msgId == 105 or msgId == 253 or msgId == 371 or msgId == 372) then
+                local jobLevel = player:GetMainJobLevel();
                 if (tValues.default.lastXpKillTime ~= 0) then
                     table.insert(tValues.default.xpKills, { time=(killTime - tValues.default.lastXpKillTime), xp=val});
                 else
                     table.insert(tValues.default.xpKills, { time=1, xp=val});
                 end
                 tValues.default.xpChain = val2;
-                tValues.default.xpTimer = 60;     
+                for i,v in ipairs(XPChainTimers) do
+                    if (jobLevel <= v.lvl) then
+                        if (tValues.default.xpChain >= 5) then
+                            tValues.default.xpTimer = v.maxtime[6];
+                        else
+                            tValues.default.xpTimer = v.maxtime[tValues.default.xpChain + 1];
+                        end
+                    end
+                end
+                if (tValues.default.xpTimer == nil) then
+                    tValues.default.xpTimer = 60;
+                end
                 tValues.default.lastXpKillTime = killTime;
                 tValues.default.exp.curr = tValues.default.exp.curr + val;
                 tValues.default.limit.curr = tValues.default.limit.curr + val;
@@ -203,7 +215,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                     table.insert(tValues.default.epKills, { time=1, ep=val});
                 end
                 tValues.default.epChain = val2;
-                tValues.default.epTimer = 30;     
+                tValues.default.epTimer = 30;
                 tValues.default.lastEpKillTime = killTime;
                 tValues.default.mastery.curr = tValues.default.mastery.curr + val;
             elseif (msgId == 719) then
@@ -238,7 +250,6 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
     elseif (e.id == 0x055) then
         --print("KI Log Update");
         local type = struct.unpack("B", e.data, 0x85);
-        --debugText = debugText .. "Key Item Packet (Type " .. type ..")\n";
         if (type == 3) then
             if (DynamisMapping[lastZone] ~= nil) then
                 local dynaKI = struct.unpack("B", e.data, 0x06);
@@ -264,7 +275,6 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
         local mId = struct.unpack("H", e.data, 0x1B); -- % 2 ^ 14;
         local rMsgId = mId % 2 ^ 14;
         local unk = struct.unpack("I", e.data, 0x1D);
-        --print(string.format("ID: %d(%d), Size: %d (%d, %d, %d, %d), Pid: %d, Pix: %d, unk: %d", mId, rMsgId, e.size, p1, p2, p3, p4, pId, pIx, unk));
     elseif (e.id == 0x036) then
         --print("NPC Dialogue");
     end
@@ -482,7 +492,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
 end);
 
 function DrawPointsBar(currJob)
-    local jobLevel = player:GetMainJobLevel(); 
+    local jobLevel = player:GetMainJobLevel();
     local mastered = player:GetJobPointsSpent(currJob) == 2100;
     if (tValues.default.mBreaker and mastered) then
         jobLevel = player:GetMasteryJobLevel();
@@ -587,7 +597,9 @@ function LoadCompactBar()
 end
 
 function UpdateCompactBar(currJob)
-    compactBar.jobicon.visible = points.settings.use_job_icon[1] and points.settings.use_compact_ui[1];
+    if (not player.isZoning and currJob > 0) then
+        compactBar.jobicon.visible = points.settings.use_job_icon[1] and points.settings.use_compact_ui[1] and compactBar.wrapper.visible;
+    end
 
     local totalSize = SIZE.new();
     if (points.settings.use_job_icon[1]) then
@@ -923,19 +935,27 @@ function ParseToken(i, token)
             label = "LP";
         end
         if (tValues.default.xpTimer > 0) then
-            if (not points.settings.use_compact_ui[1] or points.use_both) then                
+            local xpTimeMin = math.floor(tValues.default.xpTimer / 60);
+            local xpTimeSec = tValues.default.xpTimer % 60;
+            local timeString = "";
+            if (xpTimeMin > 0) then
+                timeString = ("%dm %ds"):format(xpTimeMin, xpTimeSec);
+            else
+                timeString = ("%ds"):format(xpTimeSec);
+            end
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
-                imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
+                imgui.TextColored(points.settings.colors.chainTimer, string.format("%d (%s)", tValues.default.xpChain, timeString));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.xpChain, points.settings.colors.chainTimer), EncodeColor(tValues.default.xpTimer, points.settings.colors.chainTimer)));
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, EncodeColor(tValues.default.xpChain, points.settings.colors.chainTimer), EncodeColor(timeString, points.settings.colors.chainTimer)));
         else
-            if (not points.settings.use_compact_ui[1] or points.use_both) then                
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(label .. "\xef\x83\x81>");
                 imgui.SameLine();
-                imgui.Text(string.format("%d (%ds)", tValues.default.xpChain, tValues.default.xpTimer));
+                imgui.Text(string.format("%d (%ds)", tValues.default.xpChain, 0));
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, tValues.default.xpChain, tValues.default.xpTimer));
+            compactBar.textObjs[i]:SetText(string.format(TemplateChain, label, tValues.default.xpChain, "0s"));
         end
     elseif (token =="[CP]" and jobLevel >= 99) then
         if (not points.settings.use_compact_ui[1] or points.use_both) then
@@ -1228,6 +1248,12 @@ function ParseToken(i, token)
             end
             compactBar.textObjs[i]:SetText(string.format("%s/%s", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep) ));
         end
+    elseif (token == "[TNL]") then
+        local tnl = tValues.default.exp.max - tValues.default.exp.curr;
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(string.format("TNL: %s", SeparateNumbers(tnl, sep)));
+        end
+        compactBar.textObjs[i]:SetText(string.format("TNL: %s", SeparateNumbers(tnl, sep)));
     elseif (token =="[DIV]") then
         if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.TextColored(DefaultColors.FFXIDarkGrey, points.settings.bar_divider);
