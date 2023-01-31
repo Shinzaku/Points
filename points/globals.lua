@@ -117,6 +117,7 @@ XPChainTimers = T{
 
 AvailableTokens = T{
     { key="[XP]", desc="Current job's exp; Switches to LP once level 99" },
+    { key="[TNL]", desc="Current job's required exp for next level" },
     { key="[Merits]", desc="Current job's merit points" },
     { key="[XPHour]", desc="Estimated EXP or merit points per hour" },
     { key="[XPChain]", desc="Current EXP or Limit chain with estimated timer" },
