@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.1.0";
+addon.version   = "2.1.1";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -1095,7 +1095,7 @@ function ParseToken(i, token)
         end       
 
         compactBar.textObjs[i]:SetText(outCompact);
-    elseif (token =="[Pearl]") then        
+    elseif (token =="[Pearl]") then
         if (tValues.abyssea.pearlescent >= 230) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text("Pearl:");
@@ -1260,9 +1260,9 @@ function ParseToken(i, token)
                 end
             end
             if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text((TemplatePlain):format("\xef\x8a\x90", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep)));
+                imgui.Text((TemplateRatio):format("\xef\x8a\x90", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep)));
             end
-            compactBar.textObjs[i]:SetText((TemplatePlain):format("Inv", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep)));
+            compactBar.textObjs[i]:SetText((TemplateRatio):format("Inv", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep)));
         end
     elseif (token == "[TNL]") then
         local tnl = tValues.default.exp.max - tValues.default.exp.curr;
@@ -1276,7 +1276,7 @@ function ParseToken(i, token)
         end
         compactBar.textObjs[i]:SetText(EncodeColor(points.settings.compact_divider, DefaultColors.FFXIDarkGrey));
     else
-        compactBar.textObjs[i]:SetText("");
+        compactBar.textObjs[i]:SetText(token);
     end
 end
 
