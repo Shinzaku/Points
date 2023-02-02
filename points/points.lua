@@ -1276,7 +1276,7 @@ function ParseToken(i, token)
         end
         compactBar.textObjs[i]:SetText(EncodeColor(points.settings.compact_divider, DefaultColors.FFXIDarkGrey));
     else
-        compactBar.textObjs[i]:SetText(token);
+        compactBar.textObjs[i]:SetText("");
     end
 end
 
