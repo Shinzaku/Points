@@ -266,6 +266,11 @@ config.renderStylesTab = function(settings)
                 end
                 imgui.ShowHelp("Display the job icon on the far left of the bar with current job level", true);
 
+                if (imgui.Checkbox("Show LP/HR as Merits/HR", settings.show_lphr)) then
+                    config.uiSettings.changed = true;
+                end
+                imgui.ShowHelp("Toggles showing limit points earned per hours vs merits earned per hour", true);
+
                 if (imgui.InputText("Radix Character", sep, 2)) then
                     settings.num_separator = sep[1];
                     config.uiSettings.changed = true;

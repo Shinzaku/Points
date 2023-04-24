@@ -53,6 +53,7 @@ DefaultSettings = T{
     colors = { mainText = { 1.0, 1.0, 1.0, 1.0 }, cappedValue = DefaultColors.FFXICappedValue, chainTimer = DefaultColors.FFXIYellow, bg = DefaultColors.FFXIGreyBg, bgBorder = DefaultColors.FFXIGreyBorder },
     use_job_icon = { true, },
     use_pbar_ascii = { false, },
+    show_lphr = { true, },
 }
 WrapperSettings = T{
     visible = true,
@@ -142,5 +143,6 @@ AvailableTokens = T{
     { key="[EventTimer]", desc="" },
     { key="[Gil]", desc="" },
     { key="[Inv]", desc="Current space ratio in Gobbiebag (base inventory)" },
+    { key="[ZoneTimer]", desc="Current time in zone since either zone-in or addon loading", },
     { key="[DIV]", desc="Divider; Add to create space between tokens" }
 }

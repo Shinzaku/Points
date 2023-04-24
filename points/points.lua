@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.1.1";
+addon.version   = "2.2.2";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -56,7 +56,7 @@ local globalTimer = 0;
 local tValues = {};
 local _timer = 0;
 tValues.eventTimer = 0;
-tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {}, 
+tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {},
                     cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0,
                     exp = { curr = 0, max = 0 },
                     limit = { curr = 0, points = 0, maxpoints = 0 },
@@ -72,6 +72,7 @@ tValues.voidwatch = { red = 0, blue = 0, green = 0, yellow = 0, white = 0, };
 tValues.omen = { mainObjective = "-", addObjectives = {}, };
 tValues.odyssey = { segments = 0, totalSegments = 0, izzat = 0, mMastery = 0, izCosts = {} };
 tValues.sortie = { gallimaufry = 0 };
+tValues.zoneTimer = os.clock();
 
 local compactBar = {};
 compactBar.wrapper = fonts.new(WrapperSettings);
@@ -251,10 +252,10 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
 	elseif (e.id == 0x113) then
         tValues.default.sparks = struct.unpack("I", e.data, 0x75);
 		tValues.default.accolades = struct.unpack('I', e.data, 0xE5);
-    elseif (e.id == 0x00A) then	
+    elseif (e.id == 0x00A) then
         zoning = true;
+        tValues.zoneTimer = os.clock();
     elseif (e.id == 0x055) then
-        --print("KI Log Update");
         local type = struct.unpack("B", e.data, 0x85);
         if (type == 3) then
             if (DynamisMapping[lastZone] ~= nil) then
@@ -268,21 +269,6 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                 UpdateDynamisKI(actualKI);
             end;
         end
-    elseif (e.id == 0x029) then
-        --print("Action message");
-    elseif (e.id == 0x02A) then
-        --print("Resting message");
-        local pId = struct.unpack("I", e.data, 0x05);
-        local p1 = struct.unpack("I", e.data, 0x09);
-        local p2 = struct.unpack("I", e.data, 0x0D);
-        local p3 = struct.unpack("I", e.data, 0x11);
-        local p4 = struct.unpack("I", e.data, 0x15);
-        local pIx = struct.unpack("H", e.data, 0x19);
-        local mId = struct.unpack("H", e.data, 0x1B); -- % 2 ^ 14;
-        local rMsgId = mId % 2 ^ 14;
-        local unk = struct.unpack("I", e.data, 0x1D);
-    elseif (e.id == 0x036) then
-        --print("NPC Dialogue");
     end
 end);
 
@@ -422,7 +408,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
     player = AshitaCore:GetMemoryManager():GetPlayer();
     local currJob = player:GetMainJob();
     local currZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
-    if (player.isZoning or currJob == 0) then        
+    if (player.isZoning or currJob == 0) then
         if (compactBar.wrapper:GetVisible()) then
             SetCompactVisibility(false);
         end
@@ -743,7 +729,7 @@ function CalculateEstimates()
     else
         tValues.default.epChain = 0;
     end
-    
+
     if (#tValues.default.xpKills > 0) then
         local avgXP = 0;
         local avgTime = 0;
@@ -934,10 +920,16 @@ function ParseToken(i, token)
         end
     elseif (token =="[XPHour]") then
         if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
-            if (not points.settings.use_compact_ui[1] or points.use_both) then
-                imgui.Text(string.format("(%s LP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estMpHour), sep)));
+            local ratioVal = tValues.default.estMpHour;
+            local dispLabel = "MP";
+            if (not points.settings.show_lphr[1]) then
+                ratioVal = tValues.default.estXpHour;
+                dispLabel = "LP";
             end
-            compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(tValues.default.estMpHour), "LP"));
+            if (not points.settings.use_compact_ui[1] or points.use_both) then
+                imgui.Text(string.format("(%s %s/hr)", SeparateNumbers(AbbreviateNum(ratioVal), sep), dispLabel));
+            end
+            compactBar.textObjs[i]:SetText(string.format(TemplateRateAbbr, AbbreviateNum(ratioVal), dispLabel));
         else
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(string.format("(%s XP/hr)", SeparateNumbers(AbbreviateNum(tValues.default.estXpHour), sep)));
@@ -1251,14 +1243,8 @@ function ParseToken(i, token)
     elseif (token == "[Inv]") then
         local inv =  AshitaCore:GetMemoryManager():GetInventory();
         local max = inv:GetContainerCountMax(0);
-        local cnt = 0;
+        local cnt = inv:GetContainerCount(0);
         if (max > 0) then
-            for i = 0, max, 1 do
-                local inv_entry = inv:GetContainerItem(0, i);
-                if (inv_entry ~= nil and inv_entry.Id ~= 0 and inv_entry.Id ~= 65535) then
-                    cnt = cnt + 1
-                end
-            end
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text((TemplateRatio):format("\xef\x8a\x90", SeparateNumbers(cnt, sep), SeparateNumbers(max, sep)));
             end
@@ -1270,6 +1256,12 @@ function ParseToken(i, token)
             imgui.Text(string.format("TNL: %s", SeparateNumbers(tnl, sep)));
         end
         compactBar.textObjs[i]:SetText(string.format("TNL: %s", SeparateNumbers(tnl, sep)));
+    elseif (token == "[ZoneTimer]") then
+        local extractedTime = GetHMS(os.clock() - tValues.zoneTimer);
+        if (not points.settings.use_compact_ui[1] or points.use_both) then
+            imgui.Text(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
+        end
+        compactBar.textObjs[i]:SetText(string.format(TemplateTimer, extractedTime.hr, extractedTime.min, extractedTime.sec));
     elseif (token:contains("[DIV]")) then
         if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.TextColored(DefaultColors.FFXIDarkGrey, points.settings.bar_divider);
@@ -1291,7 +1283,7 @@ function InitPointsBar()
     -- Defaults for compact bar
     LoadCompactBar();
 
-    points.window_suffix = "_" .. playerEntity.Name .. playerEntity.ServerId;
+    points.window_suffix = "_" .. playerEntity.Name;
     points.loaded = true;
 end
 
