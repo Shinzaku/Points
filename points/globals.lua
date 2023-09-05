@@ -54,6 +54,7 @@ DefaultSettings = T{
     use_job_icon = { true, },
     use_pbar_ascii = { false, },
     show_lphr = { true, },
+    hide_on_event = { false, },
 }
 WrapperSettings = T{
     visible = true,

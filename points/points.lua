@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.2";
+addon.version   = "2.2.4";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -38,6 +38,7 @@ local imgui = require("imgui");
 local fonts = require("fonts");
 local settings = require("settings");
 local config = require("config");
+local scaling = require("scaling");
 
 local player = AshitaCore:GetMemoryManager():GetPlayer();
 local lastJob = 0;
@@ -408,7 +409,7 @@ ashita.events.register("d3d_present", "present_cb", function ()
     player = AshitaCore:GetMemoryManager():GetPlayer();
     local currJob = player:GetMainJob();
     local currZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
-    if (player.isZoning or currJob == 0) then
+    if (player.isZoning or currJob == 0 or (GetPlayerEntity().StatusServer == 4 and points.settings.hide_on_event[1] == true)) then
         if (compactBar.wrapper:GetVisible()) then
             SetCompactVisibility(false);
         end
@@ -570,25 +571,26 @@ function LoadCompactBar()
     compactBar.wrapper.background.border_sizes = bSizes;
     compactBar.wrapper.background.border_visible = true;
     compactBar.wrapper.lockedz = true;
-    compactBar.wrapper.position_x = points.settings.compact.x;
-    compactBar.wrapper.position_y = points.settings.compact.y;
+    compactBar.wrapper.position_x = scaling.scale_w(points.settings.compact.x);
+    compactBar.wrapper.position_y = scaling.scale_h(points.settings.compact.y);
     compactBar.wrapper.visible = points.settings.use_compact_ui[1];
 
     compactBar.jobicon.auto_resize = false;
     compactBar.jobicon.can_focus = false;
-    compactBar.jobicon.font_height = 10;
+    compactBar.jobicon.font_height = scaling.scale_f(10);
     compactBar.jobicon.font_family = "Consolas";
     compactBar.jobicon.color_outline = 0xFF000000;
     compactBar.jobicon.background.visible = true;
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));
-    compactBar.jobicon.background.width = 64;
-    compactBar.jobicon.background.height = 16;
+    compactBar.jobicon.background.width = scaling.scale_w(64);
+    compactBar.jobicon.background.height = scaling.scale_h(16);
     compactBar.jobicon.visible = false;
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
     for i=1,#currTokens,1 do
         compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
+        compactBar.textObjs[i].font_height = scaling.scale_f(points.settings.compact.font.font_height);
         compactBar.textObjs[i].can_focus = false;
         compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
         compactBar.textObjs[i].parent = compactBar.wrapper;
@@ -602,9 +604,9 @@ function UpdateCompactBar(currJob)
 
     local totalSize = SIZE.new();
     if (points.settings.use_job_icon[1]) then
-        totalSize.cx = 64 + points.settings.compact.hPadding;
+        totalSize.cx = scaling.scale_w(64 + points.settings.compact.hPadding);
     else
-        totalSize.cx = points.settings.compact.hPadding;
+        totalSize.cx = scaling.scale_w(points.settings.compact.hPadding);
     end
     totalSize.cy = 16;
 
@@ -650,8 +652,8 @@ function UpdateCompactBar(currJob)
     compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     for i,v in pairs(compactBar.textObjs) do
         v.color = RGBAtoHex(points.settings.colors.mainText);
-        if (v.font_height ~= points.settings.compact.font.font_height) then
-            v.font_height = points.settings.compact.font.font_height;
+        if (v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height)) then
+            v.font_height = scaling.scale_f(points.settings.compact.font.font_height);
         end
         if (v.font_family ~= points.settings.compact.font.font_family) then
             v.font_family = points.settings.compact.font.font_family;
@@ -669,9 +671,9 @@ function UpdateCompactBar(currJob)
     end
     compactBar.wrapper.background.width = totalSize.cx + points.settings.compact.hPadding;
     if (points.settings.compact.font.font_height > 11) then
-        compactBar.wrapper.background.height = totalSize.cy;
+        compactBar.wrapper.background.height = scaling.scale_h(totalSize.cy);
     else
-        compactBar.wrapper.background.height = 16;
+        compactBar.wrapper.background.height = scaling.scale_h(16);
     end;
 
     compactBar.wrapper.position_x = points.settings.compact.x;
@@ -1291,6 +1293,6 @@ function ReloadImages(theme)
     guiimages = {};
     guiimages = images.loadTextures(theme);
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, theme));
-    compactBar.jobicon.background.width = 64;
-    compactBar.jobicon.background.height = 16;
+    compactBar.jobicon.background.width = scaling.scale_w(64);
+    compactBar.jobicon.background.height = scaling.scale_h(16);
 end

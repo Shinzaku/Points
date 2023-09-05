@@ -261,6 +261,11 @@ config.renderStylesTab = function(settings)
             imgui.Text("Misc");
             imgui.BeginChild("conf_misc", { 0, 100 }, true);
                 local sep = { settings.num_separator, };
+                if (imgui.Checkbox("Hide on events", settings.hide_on_event)) then
+                    config.uiSettings.changed = true;
+                end
+                imgui.ShowHelp("Toggles the bar displaying during cutscenes and NPC menu dialogues", true);
+
                 if (imgui.Checkbox("Use Job Icon", settings.use_job_icon)) then
                     config.uiSettings.changed = true;
                 end
