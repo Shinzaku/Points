@@ -60,7 +60,7 @@ config.renderTokenTab = function(settings)
                 imgui.PopStyleColor(1);
                 imgui.NewLine();
 
-                local tempBool = { true };
+                local tempBool = T{ true };
                 config.renderTokens(settings, "token_order_default", tempBool);
             imgui.EndChild();
         end

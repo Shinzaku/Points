@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.4";
+addon.version   = "2.2.5";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -36,6 +36,7 @@ local images = require("images");
 local ffi = require("ffi");
 local imgui = require("imgui");
 local fonts = require("fonts");
+local prims = require("primitives");
 local settings = require("settings");
 local config = require("config");
 local scaling = require("scaling");
@@ -45,7 +46,7 @@ local lastJob = 0;
 local lastZone = 0;
 local points = T{
     loaded = false,
-    bar_is_open = { true, },
+    bar_is_open = T{ true, },
     window_suffix = "",
     use_both = false,
     settings = settings.load(DefaultSettings)
@@ -56,8 +57,9 @@ local currTokens = {};
 local globalTimer = 0;
 local tValues = {};
 local _timer = 0;
+local tokensUpdating = false;
 tValues.eventTimer = 0;
-tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {},
+tValues.default = T{ lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {},
                     cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0,
                     exp = { curr = 0, max = 0 },
                     limit = { curr = 0, points = 0, maxpoints = 0 },
@@ -65,22 +67,22 @@ tValues.default = { lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0
                     mBreaker = false, lastEpKillTime = 0, epKills = {}, epChain = 0, estEpHour = 0, epTimer = 0,
                     mastery = { curr = 0, max = 0 },
                     };
-tValues.dynamis = { keyItems = { false, false, false, false, false } };
-tValues.abyssea = { pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0, silvery = 0, ebon = 0, };
-tValues.assault = { objective = "-", timer = 0, };
-tValues.nyzul = { floor = 0, objective = "-", };
-tValues.voidwatch = { red = 0, blue = 0, green = 0, yellow = 0, white = 0, };
-tValues.omen = { mainObjective = "-", addObjectives = {}, };
-tValues.odyssey = { segments = 0, totalSegments = 0, izzat = 0, mMastery = 0, izCosts = {} };
-tValues.sortie = { gallimaufry = 0 };
+tValues.dynamis = T{ keyItems = { false, false, false, false, false } };
+tValues.abyssea = T{ pearlescent = 0, azure = 0, ruby = 0, amber = 0, golden = 0, silvery = 0, ebon = 0, };
+tValues.assault = T{ objective = "-", timer = 0, };
+tValues.nyzul = T{ floor = 0, objective = "-", };
+tValues.voidwatch = T{ red = 0, blue = 0, green = 0, yellow = 0, white = 0, };
+tValues.omen = T{ mainObjective = "-", addObjectives = {}, };
+tValues.odyssey = T{ segments = 0, totalSegments = 0, izzat = 0, mMastery = 0, izCosts = {} };
+tValues.sortie = T{ gallimaufry = 0 };
 tValues.zoneTimer = os.clock();
 
-local compactBar = {};
+local compactBar = T{};
 compactBar.wrapper = fonts.new(WrapperSettings);
 compactBar.wrapperIndent = "                  ";
 compactBar.jobicon = fonts.new(JobIconSettings);
 compactBar.jobiconIndent = "   ";
-compactBar.textObjs = {};
+compactBar.textObjs = T{};
 
 local debugText = "";
 local zoning = false;
@@ -93,20 +95,27 @@ function UpdateSettings(s)
         points.settings = s;
     end
 
-    -- Apply the font settings..
-    for i,v in pairs(compactBar.textObjs) do
+    UpdateTokenList(zone, false, job);
+
+    -- Reapply the font settings..
+    for i,v in ipairs(compactBar.textObjs) do
         v:apply(points.settings.compact.font);
+        if (currTokens[i]:find("Bar]")) then
+            v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+            v.position_y = scaling.scale_h(3.5);
+        else
+            v.background.visible = false;
+            v.position_y = 0;
+        end
     end
 
     -- Save the current settings..
     settings.save();
-
-    UpdateTokenList(zone, false, job);
 end;
 
 settings.register('settings', 'settings_update', UpdateSettings);
 
-----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------s
 -- func: load
 -- desc: Event called when the addon is being loaded.
 ----------------------------------------------------------------------------------------------------
@@ -125,7 +134,7 @@ ashita.events.register("unload", "unload_callback1", function ()
     UpdateSettings();
     compactBar.wrapper:destroy();
     compactBar.jobicon:destroy();
-    for i,v in pairs(compactBar.textObjs) do
+    for i,v in ipairs(compactBar.textObjs) do
         v:destroy();
     end
 end);
@@ -582,18 +591,25 @@ function LoadCompactBar()
     compactBar.jobicon.color_outline = 0xFF000000;
     compactBar.jobicon.background.visible = true;
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, points.settings.theme));
-    compactBar.jobicon.background.width = scaling.scale_w(64);
-    compactBar.jobicon.background.height = scaling.scale_h(16);
+    compactBar.jobicon.background.width = 64;
+    compactBar.jobicon.background.height = 16;
+    compactBar.jobicon.background.scale_x = scaling.scaled.w;
+    compactBar.jobicon.background.scale_y = scaling.scaled.h;
     compactBar.jobicon.visible = false;
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
     for i=1,#currTokens,1 do
-        compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
-        compactBar.textObjs[i].font_height = scaling.scale_f(points.settings.compact.font.font_height);
-        compactBar.textObjs[i].can_focus = false;
-        compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
-        compactBar.textObjs[i].parent = compactBar.wrapper;
+        local newFont = fonts.new(points.settings.compact.font);
+        newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height);
+        newFont.can_focus = false;
+        newFont.visible = points.settings.use_compact_ui[1];
+        newFont.parent = compactBar.wrapper;
+        if (currTokens[i]:find("Bar]")) then
+            newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+            newFont.position_y = scaling.scale_h(3.5);
+        end
+        compactBar.textObjs:insert(newFont);
     end
 end
 
@@ -604,9 +620,9 @@ function UpdateCompactBar(currJob)
 
     local totalSize = SIZE.new();
     if (points.settings.use_job_icon[1]) then
-        totalSize.cx = scaling.scale_w(64 + points.settings.compact.hPadding);
+        totalSize.cx = math.floor(scaling.scale_w(64 + points.settings.compact.hPadding));
     else
-        totalSize.cx = scaling.scale_w(points.settings.compact.hPadding);
+        totalSize.cx = math.floor(scaling.scale_w(points.settings.compact.hPadding));
     end
     totalSize.cy = 16;
 
@@ -617,10 +633,16 @@ function UpdateCompactBar(currJob)
         end
     elseif (#compactBar.textObjs < #currTokens) then
         for i=#compactBar.textObjs + 1,#currTokens,1 do
-            compactBar.textObjs[i] = fonts.new(points.settings.compact.font);
-            compactBar.textObjs[i].can_focus = false;
-            compactBar.textObjs[i].visible = points.settings.use_compact_ui[1];
-            compactBar.textObjs[i].parent = compactBar.wrapper;
+            local newFont = fonts.new(points.settings.compact.font);
+            newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height);
+            newFont.can_focus = false;
+            newFont.visible = points.settings.use_compact_ui[1];
+            newFont.parent = compactBar.wrapper;
+            if (currTokens[i]:find("Bar]")) then
+                newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+                newFont.position_y = scaling.scale_h(3.5);
+            end
+            compactBar.textObjs:insert(newFont);
         end
     end
 
@@ -652,8 +674,10 @@ function UpdateCompactBar(currJob)
     compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     for i,v in pairs(compactBar.textObjs) do
         v.color = RGBAtoHex(points.settings.colors.mainText);
-        if (v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height)) then
+        if (not currTokens[i]:find("Bar]") and v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height)) then
             v.font_height = scaling.scale_f(points.settings.compact.font.font_height);
+        elseif (currTokens[i]:find("Bar]") and v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height - 5)) then
+            v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
         end
         if (v.font_family ~= points.settings.compact.font.font_family) then
             v.font_family = points.settings.compact.font.font_family;
@@ -666,14 +690,14 @@ function UpdateCompactBar(currJob)
         elseif (v.text ~= "") then
             v.position_x = totalSize.cx;
             totalSize.cx = totalSize.cx + lastSize.cx;
-        end;
+        end
         totalSize.cy = lastSize.cy;
     end
     compactBar.wrapper.background.width = totalSize.cx + points.settings.compact.hPadding;
     if (points.settings.compact.font.font_height > 11) then
-        compactBar.wrapper.background.height = scaling.scale_h(totalSize.cy);
+        compactBar.wrapper.background.height = math.floor(scaling.scale_h(totalSize.cy));
     else
-        compactBar.wrapper.background.height = scaling.scale_h(16);
+        compactBar.wrapper.background.height = math.floor(scaling.scale_h(16));
     end;
 
     compactBar.wrapper.position_x = points.settings.compact.x;
@@ -908,6 +932,28 @@ function ParseToken(i, token)
             end
             compactBar.textObjs[i]:SetText(xpString);
         end
+    elseif (token:find("Bar]")) then
+        local totalBars = math.floor(scaling.scale_f(points.settings.compact.font.font_height - 5) * scaling.scale_w(4));
+        local strBar = "";
+
+        if (token == "[XPBar]") then
+            local xpRatio = math.floor(totalBars * (tValues.default.exp.curr / tValues.default.exp.max));
+            local fill = totalBars - xpRatio;
+            local strProgress = "";
+            local strFill = "";
+            
+            for i=1,xpRatio do
+                strProgress = strProgress .. "|";
+            end
+            strProgress = EncodeColor(strProgress, T{ 0.89, 0.45, 0.46, 1.0 });
+
+            for i=1,fill do
+                strFill = strFill .. "|";
+            end
+            strFill = EncodeColor(strFill, T{ 1.0, 1.0, 1.0, 0.33 });
+            strBar = strProgress .. strFill;
+        end
+        compactBar.textObjs[i]:SetText(strBar);
     elseif (token =="[Merits]" and jobLevel >= 75) then
         if (tValues.default.limit.points == tValues.default.limit.maxpoints) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then
