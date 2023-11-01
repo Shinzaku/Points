@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.5";
+addon.version   = "2.2.6";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -87,7 +87,7 @@ compactBar.textObjs = T{};
 local debugText = "";
 local zoning = false;
 
-function UpdateSettings(s)
+local function UpdateSettings(s)
     local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
     local job = AshitaCore:GetMemoryManager():GetPlayer():GetMainJob();
     -- Update the settings table..
@@ -100,13 +100,13 @@ function UpdateSettings(s)
     -- Reapply the font settings..
     for i,v in ipairs(compactBar.textObjs) do
         v:apply(points.settings.compact.font);
-        if (currTokens[i]:find("Bar]")) then
-            v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
-            v.position_y = scaling.scale_h(3.5);
-        else
-            v.background.visible = false;
-            v.position_y = 0;
-        end
+            if (currTokens[i] ~= nil and currTokens[i]:find("Bar]")) then
+                v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+                v.position_y = scaling.scale_h(2.5);
+            else
+                v.background.visible = false;
+                v.position_y = 0;
+            end
     end
 
     -- Save the current settings..
@@ -500,14 +500,14 @@ function DrawPointsBar(currJob)
         jobLevel = player:GetMasteryJobLevel();
     end
     if (not points.settings.use_compact_ui[1] or points.use_both) then
-        imgui.SetNextWindowSize({ -1, 32 * points.settings.font_scale }, ImGuiCond_Always);
-        imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_Appearing);
+        imgui.SetNextWindowSize({ -1, 32 * points.settings.font_scale }, ImGuiCond_FirstUseEver);
+        imgui.SetNextWindowPos({ points.settings.bar_x, points.settings.bar_y }, ImGuiCond_FirstUseEver);
     end
     imgui.PushStyleColor(ImGuiCol_WindowBg, points.settings.colors.bg);
     imgui.PushStyleColor(ImGuiCol_Border, points.settings.colors.bgBorder);
     imgui.PushStyleColor(ImGuiCol_BorderShadow, { 1.0, 0.0, 0.0, 1.0});
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-    if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, ImGuiWindowFlags_NoDecoration)) then
+    if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_AlwaysAutoResize))) then
         imgui.PopStyleColor(3);
         imgui.PushStyleColor(ImGuiCol_Text, points.settings.colors.mainText);
         imgui.SetWindowFontScale(points.settings.font_scale);
@@ -552,12 +552,13 @@ function DrawPointsBar(currJob)
         imgui.Text(" ");
         imgui.PopStyleColor(1);
         imgui.SetWindowFontScale(1.0);
-        if (imgui.IsWindowFocused() and imgui.IsWindowHovered() and imgui.IsMouseDown(ImGuiMouseButton_Left)) then
+        if (not imgui.IsWindowHovered() and not imgui.IsMouseDown(ImGuiMouseButton_Left)) then
             local newX, newY = imgui.GetWindowPos();
-            points.settings.bar_x = newX;
-            points.settings.bar_y = newY;
-        else
-            imgui.SetWindowPos({ points.settings.bar_x, points.settings.bar_y });
+            if (points.settings.bar_x ~= newX or points.settings.bar_y ~= newY) then
+                points.settings.bar_x = newX;
+                points.settings.bar_y = newY;
+                config.uiSettings.changed = true;
+            end
         end
         imgui.End();
     else
@@ -607,7 +608,7 @@ function LoadCompactBar()
         newFont.parent = compactBar.wrapper;
         if (currTokens[i]:find("Bar]")) then
             newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
-            newFont.position_y = scaling.scale_h(3.5);
+            newFont.position_y = scaling.scale_h(2.5);
         end
         compactBar.textObjs:insert(newFont);
     end
@@ -640,7 +641,7 @@ function UpdateCompactBar(currJob)
             newFont.parent = compactBar.wrapper;
             if (currTokens[i]:find("Bar]")) then
                 newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
-                newFont.position_y = scaling.scale_h(3.5);
+                newFont.position_y = scaling.scale_h(2.5);
             end
             compactBar.textObjs:insert(newFont);
         end
@@ -937,7 +938,12 @@ function ParseToken(i, token)
         local strBar = "";
 
         if (token == "[XPBar]") then
-            local xpRatio = math.floor(totalBars * (tValues.default.exp.curr / tValues.default.exp.max));
+            local xpRatio = 1;
+            if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+                xpRatio = math.floor(totalBars * (tValues.default.limit.curr / 10000))
+            else
+                xpRatio = math.floor(totalBars * (tValues.default.exp.curr / tValues.default.exp.max))
+            end
             local fill = totalBars - xpRatio;
             local strProgress = "";
             local strFill = "";
@@ -1300,6 +1306,10 @@ function ParseToken(i, token)
         end
     elseif (token == "[TNL]") then
         local tnl = tValues.default.exp.max - tValues.default.exp.curr;
+        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+           tnl = 10000 - tValues.default.limit.curr;
+        end
+        
         if (not points.settings.use_compact_ui[1] or points.use_both) then
             imgui.Text(string.format("TNL: %s", SeparateNumbers(tnl, sep)));
         end
