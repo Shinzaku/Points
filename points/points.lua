@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.6";
+addon.version   = "2.2.7";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -101,7 +101,7 @@ local function UpdateSettings(s)
     for i,v in ipairs(compactBar.textObjs) do
         v:apply(points.settings.compact.font);
             if (currTokens[i] ~= nil and currTokens[i]:find("Bar]")) then
-                v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+                v.font_height = points.settings.compact.font.font_height - 5;
                 v.position_y = scaling.scale_h(2.5);
             else
                 v.background.visible = false;
@@ -602,12 +602,13 @@ function LoadCompactBar()
     -- Default bar items --
     for i=1,#currTokens,1 do
         local newFont = fonts.new(points.settings.compact.font);
-        newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height);
+        newFont.font_height = points.settings.compact.font.font_height;
+        newFont.bold = false;
         newFont.can_focus = false;
         newFont.visible = points.settings.use_compact_ui[1];
         newFont.parent = compactBar.wrapper;
         if (currTokens[i]:find("Bar]")) then
-            newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+            newFont.font_height = points.settings.compact.font.font_height - 5;
             newFont.position_y = scaling.scale_h(2.5);
         end
         compactBar.textObjs:insert(newFont);
@@ -625,7 +626,7 @@ function UpdateCompactBar(currJob)
     else
         totalSize.cx = math.floor(scaling.scale_w(points.settings.compact.hPadding));
     end
-    totalSize.cy = 16;
+    totalSize.cy = math.floor(scaling.scale_h(16));
 
     if (#compactBar.textObjs > #currTokens) then
         for i=#currTokens + 1,#compactBar.textObjs,1 do
@@ -635,12 +636,12 @@ function UpdateCompactBar(currJob)
     elseif (#compactBar.textObjs < #currTokens) then
         for i=#compactBar.textObjs + 1,#currTokens,1 do
             local newFont = fonts.new(points.settings.compact.font);
-            newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height);
+            newFont.font_height = points.settings.compact.font.font_height;
             newFont.can_focus = false;
             newFont.visible = points.settings.use_compact_ui[1];
             newFont.parent = compactBar.wrapper;
             if (currTokens[i]:find("Bar]")) then
-                newFont.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+                newFont.font_height = points.settings.compact.font.font_height - 5;
                 newFont.position_y = scaling.scale_h(2.5);
             end
             compactBar.textObjs:insert(newFont);
@@ -675,10 +676,10 @@ function UpdateCompactBar(currJob)
     compactBar.wrapper.background.border_color = RGBAtoHex(points.settings.colors.bgBorder);
     for i,v in pairs(compactBar.textObjs) do
         v.color = RGBAtoHex(points.settings.colors.mainText);
-        if (not currTokens[i]:find("Bar]") and v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height)) then
-            v.font_height = scaling.scale_f(points.settings.compact.font.font_height);
-        elseif (currTokens[i]:find("Bar]") and v.font_height ~= scaling.scale_f(points.settings.compact.font.font_height - 5)) then
-            v.font_height = scaling.scale_f(points.settings.compact.font.font_height - 5);
+        if (not currTokens[i]:find("Bar]") and v.font_height ~= points.settings.compact.font.font_height) then
+            v.font_height = points.settings.compact.font.font_height;
+        elseif (currTokens[i]:find("Bar]") and v.font_height ~= points.settings.compact.font.font_height - 5) then
+            v.font_height = points.settings.compact.font.font_height - 5;
         end
         if (v.font_family ~= points.settings.compact.font.font_family) then
             v.font_family = points.settings.compact.font.font_family;
@@ -692,7 +693,7 @@ function UpdateCompactBar(currJob)
             v.position_x = totalSize.cx;
             totalSize.cx = totalSize.cx + lastSize.cx;
         end
-        totalSize.cy = lastSize.cy;
+        totalSize.cy = math.floor(scaling.scale_h(lastSize.cy));
     end
     compactBar.wrapper.background.width = totalSize.cx + points.settings.compact.hPadding;
     if (points.settings.compact.font.font_height > 11) then
@@ -920,7 +921,7 @@ function ParseToken(i, token)
     end
 
     if (token =="[XP]") then
-        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (tValues.default.exp.curr == 55999 or ((player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) and player:GetMainJobLevel() >= 75)) then
             local limString = (TemplateRatio):format("LP", SeparateNumbers(tValues.default.limit.curr, sep), SeparateNumbers(10000, sep));
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.Text(limString);
@@ -934,12 +935,12 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(xpString);
         end
     elseif (token:find("Bar]")) then
-        local totalBars = math.floor(scaling.scale_f(points.settings.compact.font.font_height - 5) * scaling.scale_w(4));
+        local totalBars = math.floor((points.settings.compact.font.font_height - 5) * scaling.scale_w(4));
         local strBar = "";
 
         if (token == "[XPBar]") then
             local xpRatio = 1;
-            if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+            if (tValues.default.exp.curr == 55999 or ((player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) and player:GetMainJobLevel() >= 75)) then
                 xpRatio = math.floor(totalBars * (tValues.default.limit.curr / 10000))
             else
                 xpRatio = math.floor(totalBars * (tValues.default.exp.curr / tValues.default.exp.max))
@@ -973,7 +974,7 @@ function ParseToken(i, token)
             compactBar.textObjs[i]:SetText(string.format(TemplateBracket, tValues.default.limit.points));
         end
     elseif (token =="[XPHour]") then
-        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (tValues.default.exp.curr == 55999 or ((player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) and player:GetMainJobLevel() >= 75)) then
             local ratioVal = tValues.default.estMpHour;
             local dispLabel = "MP";
             if (not points.settings.show_lphr[1]) then
@@ -992,7 +993,7 @@ function ParseToken(i, token)
         end
     elseif (token =="[XPChain]") then
         local label = "XP";
-        if (player:GetExpCurrent() == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (player:GetExpCurrent() == 55999 or ((player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) and player:GetMainJobLevel() >= 75)) then
             label = "LP";
         end
         if (tValues.default.xpTimer > 0) then
@@ -1306,7 +1307,7 @@ function ParseToken(i, token)
         end
     elseif (token == "[TNL]") then
         local tnl = tValues.default.exp.max - tValues.default.exp.curr;
-        if (tValues.default.exp.curr == 55999 or player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) then
+        if (tValues.default.exp.curr == 55999 or ((player:GetIsLimitModeEnabled() or player:GetIsExperiencePointsLocked()) and player:GetMainJobLevel() >= 75)) then
            tnl = 10000 - tValues.default.limit.curr;
         end
         
@@ -1349,6 +1350,8 @@ function ReloadImages(theme)
     guiimages = {};
     guiimages = images.loadTextures(theme);
     compactBar.jobicon.background:SetTextureFromFile(string.format("%s/themes/%s/ffxi-jobicons-compact.png", addon.path, theme));
-    compactBar.jobicon.background.width = scaling.scale_w(64);
-    compactBar.jobicon.background.height = scaling.scale_h(16);
+    compactBar.jobicon.background.width = 64;
+    compactBar.jobicon.background.height = 16;
+    compactBar.jobicon.background.scale_x = scaling.scaled.w;
+    compactBar.jobicon.background.scale_y = scaling.scaled.h;
 end
