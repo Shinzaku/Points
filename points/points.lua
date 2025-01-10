@@ -57,7 +57,6 @@ local currTokens = {};
 local globalTimer = 0;
 local tValues = {};
 local _timer = 0;
-local tokensUpdating = false;
 tValues.eventTimer = 0;
 tValues.default = T{ lastXpKillTime = 0, xpKills = {}, xpChain = 0, estXpHour = 0, estMpHour = 0, xpTimer = 0, lastCpKillTime = 0, cpKills = {},
                     cpChain = 0, estCpHour = 0, estJpHour = 0, cpTimer = 0, sparks = 0, accolades = 0,
@@ -132,11 +131,11 @@ end);
 ----------------------------------------------------------------------------------------------------
 ashita.events.register("unload", "unload_callback1", function ()
     UpdateSettings();
-    compactBar.wrapper:destroy();
-    compactBar.jobicon:destroy();
     for i,v in ipairs(compactBar.textObjs) do
         v:destroy();
     end
+    compactBar.jobicon:destroy();
+    compactBar.wrapper:destroy();
 end);
 
 ----------------------------------------------------------------------------------------------------
@@ -223,7 +222,7 @@ ashita.events.register("packet_in", "packet_in_callback1", function (e)
                     tValues.default.exp.curr = tValues.default.exp.max - 1;
                 end
                 if (tValues.default.limit.curr > 10000) then
-                    tValues.default.limit.curr = tValues.default.limit.curr - 10000;
+                    tValues.default.limit.curr = tValues.default.limit.curr % 10000;
                 end
             elseif (msgId == 809 or msgId == 810) then
                 if (tValues.default.lastEpKillTime ~= 0) then
@@ -535,6 +534,8 @@ function DrawPointsBar(currJob)
             imgui.AlignTextToFramePadding();
             imgui.PopStyleVar(1);
             imgui.SetCursorPos({ 10 * points.settings.font_scale, 0 });
+            imgui.Text(string.format("Lv.%02d", jobLevel));
+            imgui.SameLine();
         end
 
         --------------------
@@ -596,7 +597,7 @@ function LoadCompactBar()
     compactBar.jobicon.background.height = 16;
     compactBar.jobicon.background.scale_x = scaling.scaled.w;
     compactBar.jobicon.background.scale_y = scaling.scaled.h;
-    compactBar.jobicon.visible = false;
+    compactBar.jobicon.visible = true;
     compactBar.jobicon.parent = compactBar.wrapper;
 
     -- Default bar items --
@@ -605,6 +606,7 @@ function LoadCompactBar()
         newFont.font_height = points.settings.compact.font.font_height;
         newFont.bold = false;
         newFont.can_focus = false;
+        newFont.locked = true;
         newFont.visible = points.settings.use_compact_ui[1];
         newFont.parent = compactBar.wrapper;
         if (currTokens[i]:find("Bar]")) then
@@ -616,15 +618,11 @@ function LoadCompactBar()
 end
 
 function UpdateCompactBar(currJob)
-    if (not player.isZoning and currJob > 0) then
-        compactBar.jobicon.visible = points.settings.use_job_icon[1] and points.settings.use_compact_ui[1] and compactBar.wrapper.visible;
-    end
-
     local totalSize = SIZE.new();
     if (points.settings.use_job_icon[1]) then
         totalSize.cx = math.floor(scaling.scale_w(64 + points.settings.compact.hPadding));
     else
-        totalSize.cx = math.floor(scaling.scale_w(points.settings.compact.hPadding));
+        totalSize.cx = math.floor(scaling.scale_w(32 + points.settings.compact.hPadding));
     end
     totalSize.cy = math.floor(scaling.scale_h(16));
 
@@ -638,6 +636,8 @@ function UpdateCompactBar(currJob)
             local newFont = fonts.new(points.settings.compact.font);
             newFont.font_height = points.settings.compact.font.font_height;
             newFont.can_focus = false;
+            newFont.locked = true;
+            newFont.lockedz = true;
             newFont.visible = points.settings.use_compact_ui[1];
             newFont.parent = compactBar.wrapper;
             if (currTokens[i]:find("Bar]")) then
@@ -651,17 +651,21 @@ function UpdateCompactBar(currJob)
     ------------------------------------------
     -- Job Icon display
     ------------------------------------------
+    local jobLevel = player:GetMainJobLevel();
+    local mastered = player:GetJobPointsSpent(currJob) == 2100;
     if (points.settings.use_job_icon[1]) then
         local imgOffsetX = 64 * math.fmod(currJob - 1.0, 6.0);
         local imgOffsetY = 17 * math.floor((currJob - 1) / 6.0);
         compactBar.jobicon.background.texture_offset_x = imgOffsetX;
         compactBar.jobicon.background.texture_offset_y = imgOffsetY;
-        local jobLevel = player:GetMainJobLevel();
-        local mastered = player:GetJobPointsSpent(currJob) == 2100;
         if (tValues.default.mBreaker and mastered) then
             jobLevel = player:GetMasteryJobLevel();
         end
+        compactBar.jobicon.background.visible = true;
         compactBar.jobicon.text = compactBar.jobiconIndent .. string.format("%02d", jobLevel);
+    else
+        compactBar.jobicon.background.visible = false;
+        compactBar.jobicon.text = string.format("Lv.%02d", jobLevel);
     end
     -------------------------------------------
     -- These values are already being calculated while default bar is displayed; Ensures the tokens are parsed otherwise --
