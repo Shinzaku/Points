@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.8";
+addon.version   = "2.2.9";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -965,7 +965,7 @@ function ParseToken(i, token)
             strBar = strProgress .. strFill;
         end
         compactBar.textObjs[i]:SetText(strBar);
-    elseif (token =="[Merits]" and jobLevel >= 75) then
+    elseif (token =="[Merits]") then
         if (tValues.default.limit.points == tValues.default.limit.maxpoints) then
             if (not points.settings.use_compact_ui[1] or points.use_both) then
                 imgui.TextColored(points.settings.colors.cappedValue, string.format("[%d]", tValues.default.limit.points));
