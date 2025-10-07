@@ -60,11 +60,17 @@ function AbbreviateNum(val)
 end
 
 function SeparateNumbers(val, sep)
-    local separated = string.gsub(val, "(%d)(%d%d%d)$", "%1" .. sep .. "%2", 1)
-    local found = 0;
-    while true do
-        separated, found = string.gsub(separated, "(%d)(%d%d%d),", "%1" .. sep .. "%2,", 1)
-        if found == 0 then break end
+    if (sep) then
+        local separated = string.gsub(val, "(%d)(%d%d%d)$", "%1" .. sep .. "%2", 1);
+        local found = 0;
+        while true do
+            separated, found = string.gsub(separated, "(%d)(%d%d%d)%D", "%1" .. sep .. "%2" .. sep, 1);
+            if (found == 0) then
+                break;
+            end
+        end
+        return separated;
+    else
+        return val;
     end
-    return separated;
 end
