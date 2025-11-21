@@ -25,7 +25,7 @@
 --SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 addon.name      = "points";
 addon.author    = "Shinzaku";
-addon.version   = "2.2.10";
+addon.version   = "2.3.0";
 addon.desc      = "Various resource point and event tracking";
 addon.link      = "https://github.com/Shinzaku/Ashita4-Addons/points";
 
@@ -509,7 +509,7 @@ function DrawPointsBar(currJob)
     if((not points.settings.use_compact_ui[1] or points.use_both) and imgui.Begin("PointsBar" .. points.window_suffix, points.bar_is_open, bit.bor(ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_AlwaysAutoResize))) then
         imgui.PopStyleColor(3);
         imgui.PushStyleColor(ImGuiCol_Text, points.settings.colors.mainText);
-        imgui.SetWindowFontScale(points.settings.font_scale);
+        -- imgui.SetWindowFontScale(points.settings.font_scale); Imgui: Deprecated with no way to set per window now
         -----------------------------------------
         -- Left image icon, with job and level --
         -----------------------------------------
@@ -552,7 +552,7 @@ function DrawPointsBar(currJob)
         imgui.SameLine();
         imgui.Text(" ");
         imgui.PopStyleColor(1);
-        imgui.SetWindowFontScale(1.0);
+        -- imgui.SetWindowFontScale(1.0); Imgui: Deprecated with no way to set per window now
         if (not imgui.IsWindowHovered() and not imgui.IsMouseDown(ImGuiMouseButton_Left)) then
             local newX, newY = imgui.GetWindowPos();
             if (points.settings.bar_x ~= newX or points.settings.bar_y ~= newY) then

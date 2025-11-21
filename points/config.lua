@@ -17,7 +17,7 @@ config.drawWindow = function(settings)
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 10, 10 });
     imgui.PushStyleColor(ImGuiCol_Text, { 1.0, 1.0, 1.0, 1.0 });
     if(config.uiSettings.is_open[1] and imgui.Begin(("Points v%s"):fmt(addon.version), config.uiSettings.is_open, ImGuiWindowFlags_NoSavedSettings)) then
-        imgui.BeginChild("conf_main", { 0, 90 }, true);
+        imgui.BeginChild("conf_main", { 0, 90 }, ImGuiChildFlags_Borders);
             if (imgui.Checkbox("Use Compact Bar", settings.use_compact_ui)) then
                 config.uiSettings.changed = true;
             end
@@ -51,9 +51,9 @@ config.renderTokenTab = function(settings)
     imgui.Text("Token Settings");
     imgui.Text("- Click-and-drag to reorder\n- Double-click to add or remove tokens");
 
-    imgui.BeginChild("conf_token_list_left", { 0, 0 }, true);
+    imgui.BeginChild("conf_token_list_left", { 0, 0 }, ImGuiChildFlags_Borders);
         if (imgui.CollapsingHeader("Default")) then
-            imgui.BeginChild("conf_token_default", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_default", { 0, 250 }, ImGuiChildFlags_Borders);
                 imgui.PushStyleColor(ImGuiCol_CheckMark, { 0.5, 0.5, 0.5, 1.0 });
                 imgui.Checkbox(' Enabled', { true, });
                 imgui.ShowHelp("Default token order; Cannot be disabled", true);
@@ -65,27 +65,27 @@ config.renderTokenTab = function(settings)
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Mastered")) then
-            imgui.BeginChild("conf_token_mastered", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_mastered", { 0, 250 }, ImGuiChildFlags_Borders);
                 config.renderTokens(settings, "token_order_mastered", settings.token_enabled_mastered);
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Dynamis")) then
-            imgui.BeginChild("conf_token_dynamis", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_dynamis", { 0, 250 }, ImGuiChildFlags_Borders);
                 config.renderTokens(settings, "token_order_dynamis", settings.token_enabled_dynamis);
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Assault")) then
-            imgui.BeginChild("conf_token_assault", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_assault", { 0, 250 }, ImGuiChildFlags_Borders);
                 config.renderTokens(settings, "token_order_assault", settings.token_enabled_assault);
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Nyzul")) then
-            imgui.BeginChild("conf_token_nyzul", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_nyzul", { 0, 250 }, ImGuiChildFlags_Borders);
                 config.renderTokens(settings, "token_order_nyzul", settings.token_enabled_nyzul);
             imgui.EndChild();
         end
         if (imgui.CollapsingHeader("Abyssea")) then
-            imgui.BeginChild("conf_token_abyssea", { 0, 250 }, true);
+            imgui.BeginChild("conf_token_abyssea", { 0, 250 }, ImGuiChildFlags_Borders);
                 config.renderTokens(settings, "token_order_abyssea", settings.token_enabled_abyssea);
             imgui.EndChild();
         end
@@ -107,7 +107,7 @@ config.renderTokens = function(settings, listName, flag)
 
     imgui.BeginGroup();
     imgui.TextUnformatted("Current");
-    imgui.BeginChild("active_tokens_" .. listName, { 200, 150 }, true);
+    imgui.BeginChild("active_tokens_" .. listName, { 200, 150 }, ImGuiChildFlags_Borders);
         for i=1,#tokenArr do
             if (tokenArr[i]:contains("[DIV]")) then
                 numDiv = numDiv + 1;
@@ -145,7 +145,7 @@ config.renderTokens = function(settings, listName, flag)
     imgui.SameLine();
     imgui.BeginGroup();
     imgui.TextUnformatted("Available");
-    imgui.BeginChild("available_tokens_" .. listName, { -1, 150 }, true);
+    imgui.BeginChild("available_tokens_" .. listName, { -1, 150 }, ImGuiChildFlags_Borders);
         if (imgui.BeginTable("token_table_" .. listName, 3)) then
             for i,v in ipairs(AvailableTokens) do
                 if ((i - 1) % 3 == 0) then
@@ -198,11 +198,11 @@ end
 
 config.renderStylesTab = function(settings)
     imgui.Text("Style Settings");
-    imgui.BeginChild("conf_styles", { 0, 0 }, true);
+    imgui.BeginChild("conf_styles", { 0, 0 }, ImGuiChildFlags_Borders);
     if (imgui.BeginTabBar('##points_style_tabbar', ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)) then
         if (imgui.BeginTabItem('Global', nil)) then
             imgui.Text("Font");
-            imgui.BeginChild("conf_font", { 0, 115 }, true);
+            imgui.BeginChild("conf_font", { 0, 115 }, ImGuiChildFlags_Borders);
                 if (imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.mainText)) then
                     config.uiSettings.changed = true;
                 end
@@ -221,7 +221,7 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
 
             imgui.Text("Background");
-            imgui.BeginChild("conf_bg", { 0, 95 }, true);
+            imgui.BeginChild("conf_bg", { 0, 95 }, ImGuiChildFlags_Borders);
                 if (imgui.ColorEdit4('\xef\x94\xbf Main Color', settings.colors.bg)) then
                     config.uiSettings.changed = true;
                 end
@@ -236,7 +236,7 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
             
             imgui.Text("Theme Selection");
-            imgui.BeginChild("conf_theme", { 0, 40 }, true);
+            imgui.BeginChild("conf_theme", { 0, 40 }, ImGuiChildFlags_Borders);
                 local themePaths = ashita.fs.get_directory(("%s\\themes\\"):fmt(addon.path));
                 local cTheme = settings.theme;
                 if (imgui.BeginCombo("\xef\x89\x87 Theme", themePaths[config.getThemeIndex(cTheme)[1]], ImGuiComboFlags_None)) then
@@ -259,7 +259,7 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
 
             imgui.Text("Misc");
-            imgui.BeginChild("conf_misc", { 0, 100 }, true);
+            imgui.BeginChild("conf_misc", { 0, 100 }, ImGuiChildFlags_Borders);
                 local sep = { settings.num_separator, };
                 if (imgui.Checkbox("Hide on events", settings.hide_on_event)) then
                     config.uiSettings.changed = true;
@@ -294,7 +294,7 @@ config.renderStylesTab = function(settings)
         end
         if (imgui.BeginTabItem('Full', nil)) then
             imgui.Text("Position");
-            imgui.BeginChild("conf_pos_full", { 0, 75 }, true);
+            imgui.BeginChild("conf_pos_full", { 0, 75 }, ImGuiChildFlags_Borders);
                 local cx = { settings.bar_x, };
                 local cy = { settings.bar_y, };
                 local winRect = AshitaCore:GetProperties():GetFinalFantasyRect();
@@ -309,7 +309,7 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
 
             imgui.Text("Font");
-            imgui.BeginChild("conf_font_full", { 0, 65 }, true);
+            imgui.BeginChild("conf_font_full", { 0, 65 }, ImGuiChildFlags_Borders);
                 local scale = { settings.font_scale, };
                 if (imgui.SliderFloat("\xef\x95\x88 Scale", scale, 1, 10, "%.1f")) then
                     settings.font_scale = scale[1];
@@ -326,7 +326,7 @@ config.renderStylesTab = function(settings)
         end
         if (imgui.BeginTabItem('Compact', nil)) then
             imgui.Text("Position");
-            imgui.BeginChild("conf_pos_compact", { 0, 75 }, true);
+            imgui.BeginChild("conf_pos_compact", { 0, 75 }, ImGuiChildFlags_Borders);
                 local cx = { settings.compact.x, };
                 local cy = { settings.compact.y, };
                 local winRect = AshitaCore:GetProperties():GetFinalFantasyRect();
@@ -341,7 +341,7 @@ config.renderStylesTab = function(settings)
             imgui.EndChild();
 
             imgui.Text("Font");
-            imgui.BeginChild("conf_font_compact", { 0, 95 }, true);
+            imgui.BeginChild("conf_font_compact", { 0, 95 }, ImGuiChildFlags_Borders);
                 local height = { settings.compact.font.font_height, };
                 if (imgui.SliderInt("\xef\x95\x88 Height", height, 1, 99, "%dpx")) then
                     settings.compact.font.font_height = height[1];
